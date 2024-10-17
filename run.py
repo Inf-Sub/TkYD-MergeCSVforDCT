@@ -1,12 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/10/16'
+__date__ = '2024/10/17'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.2.6'
+__version__ = '1.2.7'
 
 from sys import platform
 from subprocess import check_call
@@ -17,9 +17,10 @@ from venv import create as venv_create
 
 
 VENV_PATH = '.venv'
-VENV_INDIVIDUAL = False
+VENV_INDIVIDUAL = False if getlogin().lower() == __maintainer__.lower() else True
 REQUIREMENTS_FILE = 'requirements.txt'
 MAIN_SCRIPT = "merge_csv.py"
+
 
 # Настройка логирования
 logging.basicConfig(
