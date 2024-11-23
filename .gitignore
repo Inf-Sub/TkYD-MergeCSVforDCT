@@ -167,3 +167,4 @@ TFS*
 run_*.py
 *_v*.py
 yest_*.py
+test/
