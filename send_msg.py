@@ -1,13 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/11/09'
+__date__ = '2024/11/24'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.0.1'
-
+__version__ = '1.6.6'
 
 from os import getenv
 from aiohttp import ClientSession as aio_ClientSession
@@ -15,9 +14,9 @@ from dotenv import load_dotenv
 
 from logger import configure_logging
 
+
 # Загрузка логгера с настройками
 logging = configure_logging()
-
 
 # Загрузка переменных из .env файла
 load_dotenv()
@@ -85,5 +84,6 @@ async def send_telegram_message(message: str) -> dict:
             return {}  # Return an empty dictionary in case of an error
 
 
-# Пример вызова функции
-# asyncio.run(send_telegram_message('Ваше сообщение'))
+if __name__ == '__main__':
+    from asyncio import run as aio_run
+    aio_run(send_telegram_message('Test message.'))

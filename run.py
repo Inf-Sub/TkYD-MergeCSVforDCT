@@ -1,12 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/11/23'
+__date__ = '2024/11/24'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.6.3'
+__version__ = '1.6.6'
 
 from sys import platform
 from subprocess import check_call
@@ -25,18 +25,18 @@ MAIN_SCRIPT = 'merge_csv.py'
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(filename)s:%(lineno)-11d\t| %(asctime)-1s| %(funcName)-27s| %(levelname)-8s| %(message)s'
 )
 
 
 def create_virtual_environment(venv_dir: str) -> None:
     """Создает виртуальное окружение в указанной директории."""
     if not exists(venv_dir):
-        logging.info(f'Создаем виртуальное окружение в директории "{venv_dir}"...')
+        logging.info(f'Create a virtual environment in the directory "{venv_dir}"...')
         venv_create(venv_dir, with_pip=True)
         # check_call(["python", "-m", "venv", venv_dir])
     else:
-        logging.info(f'Виртуальное окружение уже существует в директории "{venv_dir}".')
+        logging.info(f'A virtual environment already exists in directory "{venv_dir}".')
 
 
 def install_dependencies(venv_dir: str, requirements_file: str) -> None:
@@ -45,7 +45,7 @@ def install_dependencies(venv_dir: str, requirements_file: str) -> None:
     if platform == 'win32':
         pip_executable += '.exe'
 
-    logging.info('Устанавливаем зависимости...')
+    logging.info('Installing dependencies...')
     try:
         check_call([pip_executable, 'install', '-r', requirements_file])
     except Exception as e:
@@ -63,7 +63,7 @@ def run_main_script(venv_dir: str, script_name: str) -> None:
     except Exception as e:
         logging.error(f'File "{python_executable}" not found: {e}')
 
-    logging.info(f'Запускаем {script_name}...')
+    logging.info(f'Launching "{script_name}"...')
     try:
         check_call([python_executable, script_name])
     except Exception as e:

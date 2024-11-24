@@ -1,15 +1,15 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/11/23'
+__date__ = '2024/11/24'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.6.3'
+__version__ = '1.6.6'
 
 from io import StringIO
-from asyncio import gather as aio_gather, run as aio_run, sleep as aio_sleep
+from asyncio import gather as aio_gather, run as aio_run, sleep as aio_sleep, create_task as aio_create_task
 from typing import Dict, List, Optional, Union
 from pandas import concat, read_csv, Series, DataFrame, notna
 from decimal import Decimal, ROUND_HALF_UP
@@ -204,6 +204,8 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
             'The value of the cells in the "Наименование" column has not been changed, the "CSV_NEW_NAME_VALUE" '
             'constant is empty.')
 
+    tasks = []  # Список для задач
+
     # Обработка столбца 'Packing.МестоХранения'
     for column in combined_df.columns:
         if column.startswith('Storage_'):
@@ -222,13 +224,17 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
         # Проверяем, что значение в допустимом диапазоне
         if value is not None:
             if not 0 < value <= MAX_WIDTH:
-                logging.warning(
-                    f'For product "{row['Packing.Barcode']}", the width value "{value}" was outside '
-                    f'the acceptable range.')
+                message = f'For product "{row['Packing.Barcode']}", the width value "{value}" was outside the acceptable range.'
+                logging.warning(message)
+                # Добавляем сообщение в очередь для отправки
+                tasks.append(aio_create_task(send_telegram_message(message)))
 
         return value
 
     combined_df['Packing.Ширина'] = combined_df.apply(extract_width, axis=1)
+
+    # Дожидаемся выполнения всех задач
+    await aio_gather(*tasks)
 
     # Обновление столбца 'Packing.Состав' с учетом 'AdditionalDescription'
     def extract_compound(row: Series) -> Union[str, None]:
