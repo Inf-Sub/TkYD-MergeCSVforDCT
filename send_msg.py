@@ -1,28 +1,24 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/11/24'
+__date__ = '2024/12/26'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.6.6'
+__version__ = '1.7.0'
 
-from os import getenv
 from aiohttp import ClientSession as aio_ClientSession
-from dotenv import load_dotenv
 
+from config import get_telegram_config
 from logger import configure_logging
 
 
 # Загрузка логгера с настройками
 logging = configure_logging()
 
-# Загрузка переменных из .env файла
-load_dotenv()
-
-TELEGRAM_TOKEN = getenv('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = getenv('TELEGRAM_CHAT_ID')
+# Получение параметров из ENV
+env = get_telegram_config()
 
 
 async def send_telegram_message(message: str) -> dict:
@@ -40,10 +36,10 @@ async def send_telegram_message(message: str) -> dict:
     logging.info('Preparing to send a message to Telegram.')
 
     # URL for sending a message via the Telegram Bot API
-    url = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage'
+    url = f'https://api.telegram.org/bot{env['telegram_token']}/sendMessage'
 
     # Split TELEGRAM_CHAT_ID into chat_id and message_thread_id if necessary
-    parts = TELEGRAM_CHAT_ID.split('/')
+    parts = env['telegram_chat_id'].split('/')
     chat_id = parts[0]
     message_thread_id = parts[1] if len(parts) > 1 else None
 

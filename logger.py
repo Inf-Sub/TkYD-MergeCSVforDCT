@@ -1,25 +1,25 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/11/24'
+__date__ = '2024/12/26'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.6.6'
+__version__ = '1.7.0'
 
 import logging
+# noinspection PyPackageRequirements
 import colorlog
 from os import getenv, makedirs
-from dotenv import load_dotenv
 from os.path import join
 from datetime import datetime
 
+from config import get_log_config
 
-# Загрузка переменных из .env файла
-load_dotenv()
 
-LOG_DIRECTORY = getenv('LOG_DIRECTORY', 'Logs')
+# Получение параметров из ENV
+env = get_log_config()
 
 
 # Вспомогательная функция для форматирования текущей даты
@@ -38,7 +38,7 @@ def with_logger_setup(func):
 # Настройка логирования
 def configure_logging():
     # Получаем директорию для логов из переменной окружения
-    log_dir = join(LOG_DIRECTORY, get_formatted_date('%Y'), get_formatted_date('%Y.%m'))
+    log_dir = join(env['dir'], get_formatted_date('%Y'), get_formatted_date('%Y.%m'))
 
     # Убедитесь, что директория существует
     makedirs(log_dir, exist_ok=True)
