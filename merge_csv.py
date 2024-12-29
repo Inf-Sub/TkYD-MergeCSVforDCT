@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.1'
+__version__ = '1.7.2'
 
 from io import StringIO
 from asyncio import gather as aio_gather, run as aio_run, sleep as aio_sleep, create_task as aio_create_task
@@ -60,14 +60,17 @@ async def check_file_modification(file_path: str) -> None:
     days = file_mod_delta.days
     hours, remainder = divmod(file_mod_delta.seconds, 3600)
     minutes, _ = divmod(remainder, 60)
-
-    # Формирование сообщения
+    
+    time_components = []
+    
     if days > 0:
-        message = f'The file was modified at {file_mod_time}, {days} days, {hours} hours, and {minutes} minutes ago.'
-    elif hours > 0:
-        message = f'The file was modified at {file_mod_time}, {hours} hours and {minutes} minutes ago.'
-    else:
-        message = f'The file was modified at {file_mod_time}, {minutes} minutes ago.'
+        time_components.append(f'{days} days')
+    if hours > 0:
+        time_components.append(f'{hours} hours')
+    time_components.append(f'{minutes} minutes')
+    
+    time_description = ', '.join(time_components)
+    message = f'The file was modified at {file_mod_time}, {time_description} ago.'
 
     # Проверяем разницу во времени
     if file_mod_delta <= timedelta(hours=env['inactivity_limit_hours']):
