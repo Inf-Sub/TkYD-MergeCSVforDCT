@@ -1,17 +1,17 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/12/26'
+__date__ = '2024/12/29'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.0'
+__version__ = '1.7.3'
 
 import logging
 # noinspection PyPackageRequirements
 import colorlog
-from os import getenv, makedirs
+from os import makedirs
 from os.path import join
 from datetime import datetime
 
@@ -66,7 +66,7 @@ def configure_logging():
     # Настраиваем FileHandler для вывода в файл
     file_handler = logging.FileHandler(log_file_path)
     file_formatter = logging.Formatter(
-        '%(filename)s:%(lineno)-5d | %(asctime)s | %(funcName)-26s | %(levelname)-8s | %(message)s')
+        '%(filename)s:%(lineno)-5d\t| %(asctime)s | %(funcName)-27s| %(levelname)-8s| %(message)s')
     file_handler.setFormatter(file_formatter)
 
     # Создаем логгер
