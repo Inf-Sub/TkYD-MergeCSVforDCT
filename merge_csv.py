@@ -549,61 +549,6 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
         logging.warning('No files found matching the pattern.')
 
 
-    # async def process_and_save_all_csv(header_template_path: str) -> None:
-    # """
-    # Асинхронная функция для обработки и сохранения всех CSV файлов согласно заданному шаблону заголовка.
-    #
-    # :param header_template_path: Путь к файлу с шаблоном заголовка.
-    # :type header_template_path: str
-    #
-    # Функция выполняет следующие действия:
-    #     1. Загружает шаблон заголовка из указанного пути.
-    #     2. Ищет все файлы CSV, соответствующие заданному шаблону имени файла в указанной директории.
-    #     3. Объединяет найденные CSV файлы в один DataFrame.
-    #     4. Для каждого файла:
-    #         - Проверяет время последней модификации файла.
-    #         - Копирует объединенный DataFrame и переименовывает определенные столбцы.
-    #         - Удаляет столбцы, начинающиеся с префикса 'Storage_'.
-    #         - Сортирует столбцы согласно шаблону заголовка.
-    #         - Сохраняет итоговый DataFrame в CSV файл в той же директории.
-    #     5. Логирует информацию о найденных файлах, успехе сохранения или возникших проблемах.
-    #
-    # Если не удаётся найти файлы или объединить данные, функция логирует соответствующее предупреждение.
-    # """
-    # header_template = await load_header_template(header_template_path)
-    #
-    # files_dict = await find_matching_files(env['csv_path_directory'], env['csv_file_pattern'])
-    # logging.info(f'Found {len(files_dict)} files matching the pattern.')
-    #
-    # if files_dict:
-    #     merged_df = await merge_csv_files(files_dict=files_dict)
-    #
-    #     if merged_df is not None:
-    #         for file_name, file_path in files_dict.items():
-    #             await check_file_modification(file_path=file_path)
-    #
-    #             current_df = merged_df.copy()
-    #             place_column = f'Storage_{file_name}'
-    #             if place_column in current_df.columns:
-    #                 current_df.rename(columns={place_column: 'Packing.МестоХранения'}, inplace=True)
-    #                 place_columns = [col for col in current_df.columns if col.startswith('Storage_')]
-    #                 current_df.drop(columns=place_columns, inplace=True)
-    #
-    #                 current_df = await sort_columns_by_template(current_df, header_template)
-    #
-    #                 # csv_file_name = env['csv_file_name'] if env['csv_file_name'] else env['csv_file_name_for_dta']
-    #
-    #                 output_path = join(dirname(file_path), f'{env['csv_file_name']}')
-    #                 await save_dataframe_to_csv(current_df, output_path)
-    #                 logging.info(f"Saved merged file to {output_path}")
-    #             else:
-    #                 logging.warning(f'Missing expected column {place_column} for file {file_name}.')
-    #     else:
-    #         logging.warning('No data to save after merging.')
-    # else:
-    #     logging.warning('No files found matching the pattern.')
-
-
 if __name__ == '__main__':
     env = get_csv_config()
     aio_run(process_and_save_all_csv(join(env['csv_path_template_directory'], env['csv_file_name'])))
