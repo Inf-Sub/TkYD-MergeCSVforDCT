@@ -1,12 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/12/26'
+__copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
+__date__ = '2025/02/26'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'
-__version__ = '1.7.0'
+__version__ = '1.7.2.1'
 
 from os import getenv
 from dotenv import load_dotenv
