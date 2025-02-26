@@ -1,12 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/12/26'
+__copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
+__date__ = '2025/02/26'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'
-__version__ = '1.7.0'
+__version__ = '1.7.2.2'
 
 from os import getenv
 from dotenv import load_dotenv
@@ -25,7 +25,7 @@ def load_env() -> dict:
         'CSV_PATH_TEMPLATE_DIRECTORY': getenv('CSV_PATH_TEMPLATE_DIRECTORY'),
         'CSV_PATH_DIRECTORY': getenv('CSV_PATH_DIRECTORY'),
         'CSV_FILE_PATTERN': getenv('CSV_FILE_PATTERN'),
-        'CSV_FILE_NAME': getenv('CSV_FILE_NAME', ''),
+        # 'CSV_FILE_NAME': getenv('CSV_FILE_NAME', ''),
         'CSV_FILE_NAME_FOR_DTA': getenv('CSV_FILE_NAME_FOR_DTA', ''),
         'CSV_FILE_NAME_FOR_CHECKER': getenv('CSV_FILE_NAME_FOR_CHECKER', ''),
         
@@ -54,7 +54,7 @@ def get_csv_config() -> dict:
         'csv_path_template_directory': env['CSV_PATH_TEMPLATE_DIRECTORY'],
         'csv_path_directory': env['CSV_PATH_DIRECTORY'],
         'csv_file_pattern': env['CSV_FILE_PATTERN'],
-        'csv_file_name': env['CSV_FILE_NAME'],
+        # 'csv_file_name': env['CSV_FILE_NAME'],
         'csv_file_name_for_dta': env['CSV_FILE_NAME_FOR_DTA'],
         'csv_file_name_for_checker': env['CSV_FILE_NAME_FOR_CHECKER'],
         
