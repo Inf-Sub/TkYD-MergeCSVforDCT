@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'
-__version__ = '1.7.2.1'
+__version__ = '1.7.2.2'
 
 from os import getenv
 from dotenv import load_dotenv
@@ -25,7 +25,7 @@ def load_env() -> dict:
         'CSV_PATH_TEMPLATE_DIRECTORY': getenv('CSV_PATH_TEMPLATE_DIRECTORY'),
         'CSV_PATH_DIRECTORY': getenv('CSV_PATH_DIRECTORY'),
         'CSV_FILE_PATTERN': getenv('CSV_FILE_PATTERN'),
-        'CSV_FILE_NAME': getenv('CSV_FILE_NAME', ''),
+        # 'CSV_FILE_NAME': getenv('CSV_FILE_NAME', ''),
         'CSV_FILE_NAME_FOR_DTA': getenv('CSV_FILE_NAME_FOR_DTA', ''),
         'CSV_FILE_NAME_FOR_CHECKER': getenv('CSV_FILE_NAME_FOR_CHECKER', ''),
         
