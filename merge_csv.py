@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.2.1'
+__version__ = '1.7.2.2'
 
 from io import StringIO
 from asyncio import gather as aio_gather, run as aio_run, sleep as aio_sleep, create_task as aio_create_task
@@ -550,6 +550,7 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
 
 
 if __name__ == '__main__':
+    logging.info('Run Script!')
     env = get_csv_config()
     path = str(os_join(env['csv_path_template_directory'], env['csv_file_name_for_dta']))
     aio_run(process_and_save_all_csv(path))
