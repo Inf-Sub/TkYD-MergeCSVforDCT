@@ -54,7 +54,7 @@ def get_csv_config() -> dict:
         'csv_path_template_directory': env['CSV_PATH_TEMPLATE_DIRECTORY'],
         'csv_path_directory': env['CSV_PATH_DIRECTORY'],
         'csv_file_pattern': env['CSV_FILE_PATTERN'],
-        'csv_file_name': env['CSV_FILE_NAME'],
+        # 'csv_file_name': env['CSV_FILE_NAME'],
         'csv_file_name_for_dta': env['CSV_FILE_NAME_FOR_DTA'],
         'csv_file_name_for_checker': env['CSV_FILE_NAME_FOR_CHECKER'],
         

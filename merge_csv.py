@@ -1,12 +1,12 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/12/29'
+__date__ = '2025/02/26'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.2'
+__version__ = '1.7.2.1'
 
 from io import StringIO
 from asyncio import gather as aio_gather, run as aio_run, sleep as aio_sleep, create_task as aio_create_task
@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Union
 from pandas import concat, read_csv, Series, DataFrame, notna
 from decimal import Decimal, ROUND_HALF_UP
 from aiofiles import open as aio_open
-from os.path import dirname, getmtime, join
+from os.path import dirname, getmtime, join as os_join
 from os import walk
 from re import match, search
 from datetime import datetime, timedelta
@@ -432,7 +432,7 @@ async def find_matching_files(directory: str, pattern: str) -> dict:
     for root, dirs, files in walk(directory):
         for file in files:
             if match(pattern, file):
-                file_path = join(root, file)
+                file_path = os_join(root, file)
                 csv_id = match(pattern, file)
                 if csv_id:
                     file_name = csv_id.group(1)
@@ -531,13 +531,13 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
                     
                     csv_file_name = get_valid_file_name()
                     if csv_file_name:
-                        output_path = join(dirname(file_path), csv_file_name)
+                        output_path = os_join(dirname(file_path), csv_file_name)
                         await save_dataframe_to_csv(current_df, output_path)
                         logging.info(f"Saved merged file to {output_path}")
 
                         csv_file_name_for_checker = env.get('csv_file_name_for_checker', '')
                         if csv_file_name_for_checker:
-                            checker_path = join(dirname(file_path), csv_file_name_for_checker)
+                            checker_path = os_join(dirname(file_path), csv_file_name_for_checker)
                             await copy_file(output_path, checker_path)
                     else:
                         logging.warning(f'Both CSV_FILE_NAME and CSV_FILE_NAME_FOR_DTA are empty for file {file_name}.')
@@ -551,4 +551,5 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
 
 if __name__ == '__main__':
     env = get_csv_config()
-    aio_run(process_and_save_all_csv(join(env['csv_path_template_directory'], env['csv_file_name'])))
+    path = str(os_join(env['csv_path_template_directory'], env['csv_file_name_for_dta']))
+    aio_run(process_and_save_all_csv(path))
