@@ -61,7 +61,8 @@ def create_virtual_environment(venv_dir: str) -> None:
     """Создает виртуальное окружение в указанной директории."""
     if not exists(venv_dir):
         logging.info(LOG_MESSAGE.get('venv_create').get(LOG_LANGUAGE, 'en').format(path=venv_dir))
-        venv_create(venv_dir, with_pip=True)  # check_call(["python", "-m", "venv", venv_dir])
+        venv_create(venv_dir, with_pip=True)
+        # check_call(["python", "-m", "venv", venv_dir])
     else:
         logging.warning(LOG_MESSAGE.get('venv_exists').get(LOG_LANGUAGE, 'en').format(path=venv_dir))
 
