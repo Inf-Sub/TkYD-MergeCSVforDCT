@@ -22,16 +22,36 @@ REQUIREMENTS_FILE = 'requirements.txt'
 MAIN_SCRIPT = 'merge_csv.py'
 LOG_FORMAT = '%(filename)s:%(lineno)-11d\t| %(asctime)-1s| %(funcName)-27s| %(levelname)-8s| %(message)s'
 LOG_LANGUAGE = 'ru'
-LOG_MESSAGE = {'venv_create': {'en': f'Creating a virtual environment in directory "{{path}}"...',
-    'ru': f'Создаем виртуальное окружение в каталоге "{{path}}"...', },
-    'venv_exists': {'en': f'Virtual environment already exists in directory "{{path}}".',
-        'ru': f'Виртуальное окружение уже существует в каталоге "{{path}}".', },
-    'requirements': {'en': 'Installing dependencies (requirements)...', 'ru': 'Устанавливаем зависимости...', },
-    'run_script': {'en': f'Running script "{{file}}"...', 'ru': f'Запускаем скрипт "{{file}}"...', },
-    'task_cancelled': {'en': 'Task was cancelled.', 'ru': 'Задание отменено', },
-    'dir_not_found': {'en': f'Directory "{{path}}" not found!', 'ru': f'Каталог "{{path}}" не найден!', },
-    'file_not_found': {'en': f'File "{{file}}" not found: {{error}}.',
-        'ru': f'Файл "{{file}}" не найден: {{error}}.', }, }
+LOG_MESSAGE = {
+    'venv_create': {
+        'en': f'Creating a virtual environment in directory "{{path}}"...',
+        'ru': f'Создаем виртуальное окружение в каталоге "{{path}}"...',
+    },
+    'venv_exists': {
+        'en': f'Virtual environment already exists in directory "{{path}}".',
+        'ru': f'Виртуальное окружение уже существует в каталоге "{{path}}".',
+    },
+    'requirements': {
+        'en': 'Installing dependencies (requirements)...',
+        'ru': 'Устанавливаем зависимости...',
+    },
+    'run_script': {
+        'en': f'Running script "{{file}}"...',
+        'ru': f'Запускаем скрипт "{{file}}"...',
+    },
+    'task_cancelled': {
+        'en': 'Task was cancelled.',
+        'ru': 'Задание отменено',
+    },
+    'dir_not_found': {
+        'en': f'Directory "{{path}}" not found!',
+        'ru': f'Каталог "{{path}}" не найден!',
+    },
+    'file_not_found': {
+        'en': f'File "{{file}}" not found: {{error}}.',
+        'ru': f'Файл "{{file}}" не найден: {{error}}.',
+    },
+}
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
