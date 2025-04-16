@@ -21,7 +21,7 @@ VENV_INDIVIDUAL = False if getlogin().lower() == __maintainer__.lower() else Tru
 REQUIREMENTS_FILE = 'requirements.txt'
 MAIN_SCRIPT = 'merge_csv.py'
 LOG_FORMAT = '%(filename)s:%(lineno)-11d\t| %(asctime)-1s| %(funcName)-27s| %(levelname)-8s| %(message)s'
-LOG_LANGUAGE = 'ru'
+LOG_LANGUAGE = 'en'
 LOG_MESSAGE = {
     'venv_create': {
         'en': f'Creating a virtual environment in directory "{{path}}"...',
