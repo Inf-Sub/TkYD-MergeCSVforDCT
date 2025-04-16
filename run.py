@@ -97,8 +97,9 @@ def run_main_script(venv_dir: str, script_name: str) -> None:
     except KeyboardInterrupt:
         logging.error(LOG_MESSAGE.get('task_cancelled').get(LOG_LANGUAGE, 'en'))
     except Exception as e:
-        logging.error(LOG_MESSAGE.get('file_not_found').get(LOG_LANGUAGE, 'en').format(file=python_executable,
-                                                                                       error=e))  # finally:  #     print("Cleanup actions.")
+        logging.error(LOG_MESSAGE.get('file_not_found').get(LOG_LANGUAGE, 'en').format(file=python_executable, error=e))
+    # finally:
+    #     print("Cleanup actions.")
 
 
 def create_venv() -> None:
