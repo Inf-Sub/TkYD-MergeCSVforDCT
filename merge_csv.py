@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.2.3'
+__version__ = '1.7.2.4'
 
 from io import StringIO
 from asyncio import gather as aio_gather, run as aio_run, sleep as aio_sleep, create_task as aio_create_task
@@ -282,7 +282,6 @@ def extract_width(row: Series, tasks: list) -> Union[float, None]:
     if value is not None:
         if not 0 < value <= env['max_width']:
             message = f'For product "{row["Packing.Barcode"]}", the width value "{value}" was outside the acceptable range.'
-            message += f'Row: {row}.'
             logging.warning(message)
             tasks.append(aio_create_task(send_telegram_message(message)))
 
