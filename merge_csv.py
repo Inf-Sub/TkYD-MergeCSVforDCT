@@ -6,7 +6,7 @@ __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.2.6'
+__version__ = '1.7.3.0'
 
 
 from io import StringIO
