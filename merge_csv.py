@@ -575,8 +575,14 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
         logging.warning('No files found matching the pattern.')
 
 
-if __name__ == '__main__':
+async def run_merge() -> None:
     logging.info('Run Script!')
-    env_dict = get_csv_config()
-    path = str(os_join(env_dict['csv_path_template_directory'], env_dict['csv_file_name_for_dta']))
-    aio_run(process_and_save_all_csv(path))
+    env = get_csv_config()
+    path = str(os_join(env['csv_path_template_directory'], env['csv_file_name_for_dta']))
+    await process_and_save_all_csv(path)
+    await send_telegram_message('CSV files merged completed successfully.')
+    logging.info('Finished Script!')
+
+
+if __name__ == '__main__':
+    aio_run(run_merge())
