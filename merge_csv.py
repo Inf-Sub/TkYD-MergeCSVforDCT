@@ -1,16 +1,17 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
-__date__ = '2025/05/01'
+__date__ = '2025/05/02'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.2.4'
+__version__ = '1.7.2.6'
 
 
 from io import StringIO
-from asyncio import gather as aio_gather, run as aio_run, sleep as aio_sleep, create_task as aio_create_task, Task as aio_Task
+from asyncio import gather as aio_gather, run as aio_run, create_task as aio_create_task, Task as aio_Task
+# from asyncio import sleep as aio_sleep
 from typing import Dict, List, Optional, Union
 from pandas import concat, read_csv, Series, DataFrame, notna
 from decimal import Decimal, ROUND_HALF_UP
@@ -31,9 +32,6 @@ from send_msg import send_telegram_message
 # Загрузка логгера с настройками
 logging = configure_logging()
 
-# Получение параметров из ENV
-env = get_csv_config()
-
 
 async def check_file_modification(file_path: str) -> None:
     """
@@ -46,23 +44,24 @@ async def check_file_modification(file_path: str) -> None:
     Функция выполняет следующие действия:
         1. Получает время последней модификации файла.
         2. Вычисляет разницу времени между текущим моментом и временем последней модификации файла.
-        3. Преобразует разницу во времени в часы.
+        3. Формирует строку с описанием времени, прошедшего с момента модификации.
         4. Логирует информацию о времени последней модификации файла.
         5. Если файл не изменялся дольше, чем установлено в лимите времени неактивности, отправляет предупреждение в лог и уведомление в Telegram.
-    """
-    # Получаем время последней модификации файла
-    file_mod_time = datetime.fromtimestamp(getmtime(file_path))
-    current_time = datetime.now()
-    file_mod_delta = current_time - file_mod_time
-    # file_mod_hours = file_mod_delta.total_seconds() / 3600  # Преобразование разницы во времени в часы
-    # message = f'The file was modified at {file_mod_time}, {file_mod_hours:.2f} hours ago.'
 
+    :return: None
+    """
+    env: Dict[str: str] = get_csv_config()
+    # Получаем время последней модификации файла
+    file_mod_time: datetime = datetime.fromtimestamp(getmtime(file_path))
+    current_time: datetime = datetime.now()
+    file_mod_delta: timedelta = current_time - file_mod_time
+    
     # Определение времени, прошедшего с момента модификации
-    days = file_mod_delta.days
+    days: int = file_mod_delta.days
     hours, remainder = divmod(file_mod_delta.seconds, 3600)
     minutes, _ = divmod(remainder, 60)
     
-    time_components = []
+    time_components: List[str] = []
     
     if days > 0:
         time_components.append(f'{days} days')
@@ -70,16 +69,16 @@ async def check_file_modification(file_path: str) -> None:
         time_components.append(f'{hours} hours')
     time_components.append(f'{minutes} minutes')
     
-    time_description = ', '.join(time_components)
-    message = f'The file was modified at {file_mod_time}, {time_description} ago.'
-
+    time_description: str = ', '.join(time_components)
+    message: str = f'The file was modified at {file_mod_time}, {time_description} ago.'
+    
     # Проверяем разницу во времени
     if file_mod_delta <= timedelta(hours=env['inactivity_limit_hours']):
         logging.info(message)
     else:
-        message = f'File {file_path} has not been modified for more than {env['inactivity_limit_hours']} hours. {message}'
+        message = f'File {file_path} has not been modified for more than {env["inactivity_limit_hours"]} hours. {message}'
         logging.warning(message)
-
+        
         # Отправляем уведомление в Telegram
         await send_telegram_message(message)
 
@@ -97,9 +96,9 @@ async def read_file_lines(file_path: str) -> Optional[List[str]]:
         3. Возвращает список строк, если файл не пустой. Если файл пуст, возвращает None.
     
     Обработка исключений:
-        - Logирует ошибку, если файл не найден.
-        - Logирует ошибку, если доступ к файлу запрещен.
-        - Logирует общую ошибку, если происходит другая неисправность во время чтения.
+        - Логирует ошибку, если файл не найден.
+        - Логирует ошибку, если доступ к файлу запрещен.
+        - Логирует общую ошибку, если происходит другая неисправность во время чтения.
 
     :return: Список строк из файла или None, если файл пуст или произошла ошибка.
     :rtype: Optional[List[str]]
@@ -109,11 +108,11 @@ async def read_file_lines(file_path: str) -> Optional[List[str]]:
             lines = await file.readlines()
             return lines if lines else None
     except FileNotFoundError:
-        logging.error(f'File not found: {file_path}')
+        logging.error(f'File not found: "{file_path}"')
     except PermissionError:
-        logging.error(f'Access denied for file: {file_path}')
+        logging.error(f'Access denied for file: "{file_path}"')
     except Exception as e:
-        logging.error(f'An error occurred while reading {file_path}: {str(e)}')
+        logging.error(f'An error occurred while reading "{file_path}": {str(e)}')
     return None
 
 
@@ -126,15 +125,16 @@ async def process_headers(header_line: str) -> List[str]:
 
     Функция выполняет следующие действия:
         1. Удаляет начальные и конечные пробелы в строке заголовков.
-        2. Разделяет строку заголовков на отдельные заголовки, используя разделитель, указанный в переменной окружения 'csv_separator'.
-        3. Фильтрует и возвращает список заголовков, удаляя те, которые содержат только пробелы.
+        2. Разделяет строку заголовков на отдельные заголовки, используя разделитель, указанный в конфигурации CSV.
+        3. Фильтрует и возвращает список заголовков, исключая те, которые содержат только пробелы.
 
     :return: Список непустых заголовков.
     :rtype: List[str]
     """
-    await aio_sleep(0)
-    headers = header_line.strip().split(env['csv_separator'])
-    return [header for header in headers if header.strip()]
+    # await aio_sleep(0)  # Предполагается, что это асинхронная пауза для имитации работы
+    env: Dict[str: str] = get_csv_config()
+    headers = header_line.strip().split(env.get('csv_separator', ';'))  # Разделяем строку заголовков
+    return [header for header in headers if header.strip()]  # Возвращаем непустые заголовки
 
 
 async def load_header_template(template_path: str) -> List[str]:
@@ -150,6 +150,9 @@ async def load_header_template(template_path: str) -> List[str]:
         3. Если строки имеются, обрабатывает первую строку как заголовок.
         4. Возвращает обработанный заголовок в виде списка строк.
         5. Если файл пуст или не существует, возвращает пустой список.
+
+    :return: Список заголовков из файла шаблона или пустой список, если файл пуст или не существует.
+    :rtype: List[str]
     """
     lines = await read_file_lines(template_path)
     if lines:
@@ -175,6 +178,7 @@ async def read_csv_async(file_path: str) -> Optional[DataFrame]:
         6. Объединяет очищенные строки данных.
         7. Создает DataFrame из очищенных данных, используя только непустые заголовки для чтения.
     """
+    env: Dict[str: str] = get_csv_config()
     logging.info(f'Reading file: {file_path}')
     lines = await read_file_lines(file_path)
     if not lines:
@@ -202,14 +206,14 @@ async def read_csv_async(file_path: str) -> Optional[DataFrame]:
     return df
 
 
-async def sort_columns_by_template(df: DataFrame, header_template: list) -> DataFrame:
+async def sort_columns_by_template(df: DataFrame, header_template: List[str]) -> DataFrame:
     """
     Асинхронная функция для фильтрации и сортировки столбцов DataFrame на основе заданного шаблона заголовков.
 
     :param df: DataFrame, столбцы которого необходимо отсортировать и отфильтровать.
     :type df: DataFrame
-    :param header_template: Список с именами столбцов, определяющий порядок и фильтрацию столбцов DataFrame.
-    :type header_template: list
+    :param header_template: Список строк с именами столбцов, определяющий порядок и фильтрацию столбцов DataFrame.
+    :type header_template: List[str]
 
     Функция выполняет следующие действия:
         1. Использует шаблон заголовков для фильтрации столбцов DataFrame.
@@ -219,8 +223,11 @@ async def sort_columns_by_template(df: DataFrame, header_template: list) -> Data
     Важно:
         - Столбцы, отсутствующие в DataFrame, но указанные в шаблоне, будут добавлены как пустые.
         - Столбцы, отсутствующие в шаблоне, будут удалены из итогового DataFrame.
+
+    :return: Новый DataFrame с отсортированными и отфильтрованными столбцами.
+    :rtype: DataFrame
     """
-    await aio_sleep(0)
+    # await aio_sleep(0)
     # Фильтруем и сортируем столбцы DataFrame по шаблону
     sorted_df = df.reindex(columns=header_template)
     return sorted_df
@@ -228,14 +235,17 @@ async def sort_columns_by_template(df: DataFrame, header_template: list) -> Data
 
 def safe_sum(series: Series, decimal_places: Optional[int] = None) -> float:
     """
-    Функция для безопасного вычисления суммы значений в серии данных с возможностью округления результата до
-    указанного количества десятичных знаков.
+    Вычисляет сумму значений в серии данных с возможностью округления результата до указанного количества
+    десятичных знаков.
 
     :param series: Серия данных, содержащая числовые значения, которые необходимо суммировать.
     :type series: Series
     :param decimal_places: Количество знаков после запятой, до которого нужно округлить итоговую сумму.
                            Если None, то округление не выполняется.
     :type decimal_places: Optional[int]
+
+    :return: Итоговая сумма значений в серии, округленная до указанного количества десятичных знаков (если применимо).
+    :rtype: float
 
     Функция выполняет следующие действия:
         1. Инициализирует переменную total, представляющую собой сумму, с нулевым значением типа Decimal.
@@ -273,6 +283,7 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
         4. Если значение не соответствует допустимому диапазону, генерирует предупреждающее сообщение и создает задачу для отправки уведомления в Telegram.
         5. Возвращает извлеченное значение ширины или None, если значение не удалось извлечь или оно некорректно.
     """
+    env: Dict[str: str] = get_csv_config()
     value: Union[float, None] = None
     key_width: str = 'Packing.Ширина'
     key_description: str = 'Description'
@@ -285,7 +296,8 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
 
     if value is not None:
         if not 0 < value <= env['max_width']:
-            message = f'For product "{row["Packing.Barcode"]}", the width value "{value}" was outside the acceptable range.'
+            message = f'For product "{row["Packing.Barcode"]}", the width value "{value}" was outside the acceptable range. '
+            message += f'Source_File: "{row["Source_File"]}".'
             logging.warning(message)
             tasks.append(aio_create_task(send_telegram_message(message)))
 
@@ -342,6 +354,7 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
     :return: Возвращает объединенный и обработанный DataFrame или None, если не удалось объединить данные.
     :rtype: Optional[DataFrame]
     """
+    env: Dict[str: str] = get_csv_config()
     dataframes = await aio_gather(*[read_csv_async(file_path) for file_path in files_dict.values()])
     dataframes = [df for df in dataframes if df is not None]
 
@@ -352,6 +365,7 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
     # Создаем комбинированный DataFrame
     combined_data = []
     for df, file_name in zip(dataframes, files_dict.keys()):
+        df['Source_File'] = file_name  # Добавляем имя файла как новый столбец
         df[f'Storage_{file_name}'] = df['Packing.МестоХранения'].fillna('').astype(str).apply(lambda x: f'{x}')
         df.drop(columns=['Packing.МестоХранения'], inplace=True)
         combined_data.append(df)
@@ -415,7 +429,8 @@ async def save_dataframe_to_csv(df: 'DataFrame', output_path: str) -> None:
     Функция выполняет следующее действие:
         - Сохраняет переданный DataFrame в файл формата CSV по указанному пути, используя разделитель, заданный в переменной окружения 'csv_separator'.
     """
-    df.to_csv(output_path, index=False, sep=env['csv_separator'])
+    env: Dict[str: str] = get_csv_config()
+    df.to_csv(output_path, index=False, sep=env.get('csv_separator', ';'))
 
 
 async def find_matching_files(directory: str, pattern: str) -> dict:
@@ -458,6 +473,7 @@ def get_valid_file_name() -> Optional[str]:
     :return: Имя файла в виде строки или None, если ни одна из переменных окружения не содержит имени файла.
     :rtype: Optional[str]
     """
+    env: Dict[str: str] = get_csv_config()
     csv_file_name = env.get('csv_file_name', '')
     csv_file_name_for_dta = env.get('csv_file_name_for_dta', '')
 
@@ -484,9 +500,9 @@ async def copy_file(src: str, dst: str) -> None:
     """
     try:
         shutil_copy(src, dst)
-        logging.info(f'File copied from {src} to {dst}')
+        logging.info(f'File copied from "{src}" to "{dst}".')
     except Exception as e:
-        logging.error(f'Failed to copy file from {src} to {dst}: {e}')
+        logging.error(f'Failed to copy file from "{src}" to "{dst}": {e}.')
 
 
 async def process_and_save_all_csv(header_template_path: str) -> None:
@@ -514,26 +530,29 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
             - Если указано, копирует файл в другое место для проверки.
         7. Логирует предупреждения в случае отсутствия данных для сохранения или если не удалось найти файлы по шаблону.
         8. Логирует предупреждения в случае отсутствия ожидаемого столбца в данных.
-    """
-    header_template = await load_header_template(header_template_path)
 
+    :return: None
+    """
+    env: Dict[str: str] = get_csv_config()
+    header_template = await load_header_template(header_template_path)
+    
     files_dict = await find_matching_files(env['csv_path_directory'], env['csv_file_pattern'])
     logging.info(f'Found {len(files_dict)} files matching the pattern.')
-
+    
     if files_dict:
         merged_df = await merge_csv_files(files_dict=files_dict)
-
+        
         if merged_df is not None:
             for file_name, file_path in files_dict.items():
                 await check_file_modification(file_path=file_path)
-
+                
                 current_df = merged_df.copy()
                 place_column = f'Storage_{file_name}'
                 if place_column in current_df.columns:
                     current_df.rename(columns={place_column: 'Packing.МестоХранения'}, inplace=True)
                     place_columns = [col for col in current_df.columns if col.startswith('Storage_')]
                     current_df.drop(columns=place_columns, inplace=True)
-
+                    
                     current_df = await sort_columns_by_template(current_df, header_template)
                     
                     csv_file_name = get_valid_file_name()
@@ -541,7 +560,7 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
                         output_path = os_join(dirname(file_path), csv_file_name)
                         await save_dataframe_to_csv(current_df, output_path)
                         logging.info(f"Saved merged file to {output_path}")
-
+                        
                         csv_file_name_for_checker = env.get('csv_file_name_for_checker', '')
                         if csv_file_name_for_checker:
                             checker_path = os_join(dirname(file_path), csv_file_name_for_checker)
@@ -558,6 +577,6 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
 
 if __name__ == '__main__':
     logging.info('Run Script!')
-    env = get_csv_config()
-    path = str(os_join(env['csv_path_template_directory'], env['csv_file_name_for_dta']))
+    env_dict = get_csv_config()
+    path = str(os_join(env_dict['csv_path_template_directory'], env_dict['csv_file_name_for_dta']))
     aio_run(process_and_save_all_csv(path))
