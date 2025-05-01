@@ -297,7 +297,7 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
     if value is not None:
         if not 0 < value <= env['max_width']:
             message = f'For product "{row["Packing.Barcode"]}", the width value "{value}" was outside the acceptable range. '
-            message += f'Source_File: "{row["Source_File"]}".'
+            message += f'Source: "{row["Source_File"]}".'
             logging.warning(message)
             tasks.append(aio_create_task(send_telegram_message(message)))
 
