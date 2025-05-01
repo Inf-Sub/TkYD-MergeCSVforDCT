@@ -300,7 +300,7 @@ def extract_compound(row: Series) -> Union[str, None]:
     :type row: Series
 
     :return: Извлеченное значение состава или None, если значение не удалось извлечь или оно некорректно.
-    :rtype: Union[float, None]
+    :rtype: Union[str, None]
 
     Функция выполняет следующие действия:
         1. Проверяет, является ли значение в столбце 'Packing.Состав' строкой и не пусто ли оно.
