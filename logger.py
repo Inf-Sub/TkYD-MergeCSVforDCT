@@ -1,7 +1,7 @@
 __author__ = 'InfSub'
 __contact__ = 'ADmin@TkYD.ru'
 __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2024/12/29'
+__date__ = '2025/05/02'
 __deprecated__ = False
 __email__ = 'ADmin@TkYD.ru'
 __maintainer__ = 'InfSub'
@@ -49,7 +49,7 @@ def configure_logging():
 
     # Создаем форматтер для логов с цветами
     color_formatter = colorlog.ColoredFormatter(
-        '%(filename)s:%(lineno)-5d\t| %(log_color)s%(asctime)s| %(funcName)-27s| %(levelname)-8s| %(message)s',
+        '%(filename)s:%(lineno)-5d\t| %(log_color)s%(asctime)-24s| %(funcName)-27s| %(levelname)-8s| %(message)s',
         log_colors={
             'DEBUG': 'orange',
             'INFO': 'light_green',
@@ -66,7 +66,7 @@ def configure_logging():
     # Настраиваем FileHandler для вывода в файл
     file_handler = logging.FileHandler(log_file_path)
     file_formatter = logging.Formatter(
-        '%(filename)s:%(lineno)-5d\t| %(asctime)s | %(funcName)-27s| %(levelname)-8s| %(message)s')
+        '%(filename)s:%(lineno)-5d\t| %(asctime)-24s| %(funcName)-27s| %(levelname)-8s| %(message)s')
     file_handler.setFormatter(file_formatter)
 
     # Создаем логгер
