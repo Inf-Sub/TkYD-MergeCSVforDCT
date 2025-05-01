@@ -8,8 +8,9 @@ __maintainer__ = 'InfSub'
 __status__ = 'Production'  # 'Production / Development'
 __version__ = '1.7.2.4'
 
+
 from io import StringIO
-from asyncio import gather as aio_gather, run as aio_run, sleep as aio_sleep, create_task as aio_create_task
+from asyncio import gather as aio_gather, run as aio_run, sleep as aio_sleep, create_task as aio_create_task, Task as aio_Task
 from typing import Dict, List, Optional, Union
 from pandas import concat, read_csv, Series, DataFrame, notna
 from decimal import Decimal, ROUND_HALF_UP
@@ -253,14 +254,17 @@ def safe_sum(series: Series, decimal_places: Optional[int] = None) -> float:
     return float(total)
 
 
-def extract_width(row: Series, tasks: list) -> Union[float, None]:
+def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
     """
     Функция для извлечения значения ширины из строки данных и проверки его валидности.
 
     :param row: Строка данных, содержащая информацию о продукте, включая ширину и описание.
     :type row: Series
-    :param tasks: Список задач, который будет дополнен задачами отправки уведомлений при обнаружении ошибки.
-    :type tasks: list
+    :param tasks: Список задач (asyncio.Task), который будет дополнен задачами отправки уведомлений при обнаружении ошибки.
+    :type tasks: List[aio_Task]
+
+    :return: Извлеченное значение ширины или None, если значение не удалось извлечь или оно некорректно.
+    :rtype: Union[float, None]
 
     Функция выполняет следующие действия:
         1. Проверяет наличие и тип данных в поле ширины ('Packing.Ширина'). Если значение является числом (int, float), оно извлекается.
@@ -269,9 +273,9 @@ def extract_width(row: Series, tasks: list) -> Union[float, None]:
         4. Если значение не соответствует допустимому диапазону, генерирует предупреждающее сообщение и создает задачу для отправки уведомления в Telegram.
         5. Возвращает извлеченное значение ширины или None, если значение не удалось извлечь или оно некорректно.
     """
-    value = None
-    key_width = 'Packing.Ширина'
-    key_description = 'Description'
+    value: Union[float, None] = None
+    key_width: str = 'Packing.Ширина'
+    key_description: str = 'Description'
     
     if notna(row[key_width]) and isinstance(row[key_width], (int, float)):
         value = row[key_width]
@@ -295,6 +299,9 @@ def extract_compound(row: Series) -> Union[str, None]:
     :param row: Строка данных, содержащая столбцы 'Packing.Состав' и 'AdditionalDescription'.
     :type row: Series
 
+    :return: Извлеченное значение состава или None, если значение не удалось извлечь или оно некорректно.
+    :rtype: Union[float, None]
+
     Функция выполняет следующие действия:
         1. Проверяет, является ли значение в столбце 'Packing.Состав' строкой и не пусто ли оно.
         2. Если условие из пункта 1 выполняется, возвращает значение из 'Packing.Состав'.
@@ -302,9 +309,9 @@ def extract_compound(row: Series) -> Union[str, None]:
         4. Если условие из пункта 3 выполняется, возвращает значение из 'AdditionalDescription'.
         5. Если ни одно из условий не выполняется, возвращает None.
     """
-    value = None
-    key_compound = 'Packing.Состав'
-    key_description = 'AdditionalDescription'
+    value: Union[str, None] = None
+    key_compound: str = 'Packing.Состав'
+    key_description: str = 'AdditionalDescription'
     
     if isinstance(row[key_compound], str) and row[key_compound]:
         value = row[key_compound] if row[key_compound] else None
@@ -363,7 +370,7 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
         logging.warning(
             f'{message} not been changed, the "CSV_NEW_NAME_VALUE" constant is empty.')
 
-    tasks = []  # Список для задач
+    tasks: List[aio_Task] = []  # Список для задач
 
     # Обработка столбца 'Packing.МестоХранения'
     for column in combined_df.columns:
