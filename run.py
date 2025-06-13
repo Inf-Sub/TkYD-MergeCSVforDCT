@@ -1,11 +1,11 @@
-__author__ = 'InfSub'
-__contact__ = 'https:/t.me/InfSub'
-__copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-__date__ = '2025/04/30'
-__deprecated__ = False
-__maintainer__ = 'InfSub'
-__status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.6'
+# __author__ = 'InfSub'
+# __contact__ = 'https:/t.me/InfSub'
+# __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
+# __date__ = '2025/04/30'
+# __deprecated__ = False
+# __maintainer__ = 'InfSub'
+# __status__ = 'Production'  # 'Production / Development'
+# __version__ = '1.7.6'
 
 from sys import platform
 from subprocess import check_call
@@ -25,25 +25,30 @@ LOG_LANGUAGE = 'en'  # en / ru
 LOG_MESSAGE = {
     'venv_create': {
         'en': f'Creating a virtual environment in directory "{{path}}"...',
-    'ru': f'Создаем виртуальное окружение в каталоге "{{path}}"...',
+        'ru': f'Создаем виртуальное окружение в каталоге "{{path}}"...',
     },
     'venv_exists': {
         'en': f'Virtual environment already exists in directory "{{path}}".',
         'ru': f'Виртуальное окружение уже существует в каталоге "{{path}}".',
     },
     'requirements': {
-        'en': 'Installing dependencies (requirements)...', 'ru': 'Устанавливаем зависимости...',
+        'en': 'Installing dependencies (requirements)...', 
+        'ru': 'Устанавливаем зависимости...',
     },
     'run_script': {
-        'en': f'Running script "{{file}}"...', 'ru': f'Запускаем скрипт "{{file}}"...',
+        'en': f'Running script "{{file}}"...', 
+        'ru': f'Запускаем скрипт "{{file}}"...',
     },
     'task_cancelled': {
-        'en': 'Task was cancelled.', 'ru': 'Задание отменено',
+        'en': 'Task was cancelled.', 
+        'ru': 'Задание отменено',
     },
     'dir_not_found': {
-        'en': f'Directory "{{path}}" not found!', 'ru': f'Каталог "{{path}}" не найден!',
+        'en': f'Directory "{{path}}" not found!', 
+        'ru': f'Каталог "{{path}}" не найден!',
     },
-    'file_not_found': {'en': f'File "{{file}}" not found: {{error}}.',
+    'file_not_found': {
+        'en': f'File "{{file}}" not found: {{error}}.',
         'ru': f'Файл "{{file}}" не найден: {{error}}.',
     },
 }

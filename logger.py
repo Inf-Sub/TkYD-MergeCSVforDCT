@@ -1,99 +1,162 @@
-__author__ = 'InfSub'
-__contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-__date__ = '2025/05/02'
-__deprecated__ = False
-__email__ = 'ADmin@TkYD.ru'
-__maintainer__ = 'InfSub'
-__status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.3'
+# __author__ = 'InfSub'
+# __contact__ = 'https:/t.me/InfSub'
+# __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
+# __date__ = '2025/06/02'
+# __deprecated__ = False
+# __maintainer__ = 'InfSub'
+# __status__ = 'Development'  # 'Production / Development'
+# __version__ = '1.0.6.2'
 
 import logging
-# noinspection PyPackageRequirements
-import colorlog
-from os import makedirs
-from os.path import join
-from datetime import datetime
+import logging.config
+from colorlog import ColoredFormatter
+from pathlib import Path
+from typing import List, Dict
+from os.path import join as os_join
+from datetime import datetime as dt
 
-from config import get_log_config
-
-
-# Получение параметров из ENV
-env = get_log_config()
+from config import Config
 
 
-# Вспомогательная функция для форматирования текущей даты
-def get_formatted_date(format_str):
-    return datetime.now().strftime(format_str)
+def setup_logger(log_path: str | None = None) -> str | None:
+    """
+    Configures the logging settings, including file paths and formats.
+
+    :param log_path: The file path for logging; if not provided, it defaults to the environment setting.
+
+    :return: None
+    """
+    env: Dict[str: str] = Config().get_config('log')
+
+    log_level_console: str = env.get('log_level_console')
+    log_level_file: str = env.get('log_level_file')
+    log_level_root: str = env.get('log_level_root', 'INFO')
+    log_format_console: str = env.get('log_format_console')
+    log_format_file: str = env.get('log_format_file')
+    log_date_format: str = env.get('log_date_format')
+    log_console_language: str = env.get('log_console_language')
+    log_dir = env.get('log_dir', r'logs\%Y\%Y.%m')
+    log_file = env.get('log_file', 'backup_log_%Y.%m.%d.log')
+
+    if log_path is None:
+        log_path = os_join(log_dir, log_file)
+
+    log_path = dt.now().strftime(log_path)
+
+    try:
+        log_dir = Path(log_path).parent
+        if log_dir.exists() and not log_dir.is_dir():
+            raise Exception(f'Path exists but is not a directory: {log_dir}')
+        log_dir.mkdir(parents=True, exist_ok=True)
+    except TypeError:
+        logging.error(f'Variable "log_path" must be a Path object or string, not "NoneType"!')
+        return None
+    except Exception as e:
+        logging.error(f'Failed to create log directory: {e}')
+        return None
+
+    try:
+        logging.config.dictConfig(
+            {
+                'version': 1, 'disable_existing_loggers': False,
+                'formatters': {
+                    'standard': {
+                        'format': log_format_file,
+                    },
+                    'colored': {
+                        '()': ColoredFormatter,
+                        'format': log_format_console,
+                        'datefmt': log_date_format,
+                        'reset': True,
+                        'log_colors': {
+                            'DEBUG': 'cyan',
+                            'INFO': 'green',
+                            'WARNING': 'yellow',
+                            'ERROR': 'red',
+                            'CRITICAL': 'bold_red',
+                        }
+                    }
+                },
+                'handlers': {
+                    'console': {
+                        'class': 'logging.StreamHandler',
+                        'formatter': 'colored',
+                        'level': log_level_console,
+                    },
+                    'rotating_file': {
+                        'class': 'logging.handlers.RotatingFileHandler',
+                        'formatter': 'standard',
+                        'level': log_level_file,
+                        'filename': log_path,
+                        'maxBytes': 10 * 1024 * 1024,
+                        'backupCount': 5,
+                    },
+                },
+                'root': {
+                    'handlers': ['console', 'rotating_file'],
+                    'level': log_level_root,
+                },
+            }
+        )
+    except Exception as e:
+        logging.error(f'Error configuring logging: {e}')
+        return None
+
+    log_ignore_list: List[str] = [
+        # 'smbprotocol'
+    ]
+
+    for logger_name in log_ignore_list:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+    return log_console_language
 
 
-# Декоратор для настройки и получения логгера
-def with_logger_setup(func):
-    def wrapper(*args, **kwargs):
-        logger = configure_logging()
-        return func(logger, *args, **kwargs)
-    return wrapper
+def change_log_levels(console_level: str, file_level: str | None = None) -> None:
+    """
+    Adjust the logging levels for console and file handlers.
+
+    This function sets the logging level for the console output and optionally for the
+    file output. If the file level is not specified, it defaults to the console level.
+
+    :param console_level: The logging level for console output (e.g., 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL').
+    :param file_level: The logging level for file output (optional). If not provided, the console level will be used.
+
+    :return: None
+    """
+    root_logger = logging.getLogger()
+    if file_level is None:
+        file_level = console_level
+
+    for handler in root_logger.handlers:
+        if isinstance(handler, logging.StreamHandler):
+            logging.info(f'Set logger level {console_level} to console.')
+            handler.setLevel(console_level)
+        elif isinstance(handler, logging.handlers.RotatingFileHandler):
+            logging.info(f'Set logger level {file_level} to log file.')
+            handler.setLevel(file_level)
 
 
-# Настройка логирования
-def configure_logging():
-    # Получаем директорию для логов из переменной окружения
-    log_dir = join(env['dir'], get_formatted_date('%Y'), get_formatted_date('%Y.%m'))
-
-    # Убедитесь, что директория существует
-    makedirs(log_dir, exist_ok=True)
-
-    # Создаем имя файла лога с текущей датой
-    log_file_name = f'{get_formatted_date("%Y.%m.%d")}.log'
-    log_file_path = join(log_dir, log_file_name)
-
-    # Создаем форматтер для логов с цветами
-    color_formatter = colorlog.ColoredFormatter(
-        '%(filename)s:%(lineno)-5d\t| %(log_color)s%(asctime)-24s| %(funcName)-27s| %(levelname)-8s| %(message)s',
-        log_colors={
-            'DEBUG': 'orange',
-            'INFO': 'light_green',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'bold_red',
-        }
-    )
-
-    # Настраиваем StreamHandler для вывода в консоль
-    console_handler = colorlog.StreamHandler()
-    console_handler.setFormatter(color_formatter)
-
-    # Настраиваем FileHandler для вывода в файл
-    file_handler = logging.FileHandler(log_file_path)
-    file_formatter = logging.Formatter(
-        '%(filename)s:%(lineno)-5d\t| %(asctime)-24s| %(funcName)-27s| %(levelname)-8s| %(message)s')
-    file_handler.setFormatter(file_formatter)
-
-    # Создаем логгер
-    logger = logging.getLogger(__name__)
-
-    # Проверяем, есть ли уже обработчики
-    if logger.hasHandlers():
-        # Если обработчики уже есть, выходим, ене добавляя новых
-        return logger
-
-    # Устанавливаем уровень логирования
-    logger.setLevel(logging.INFO)
-
-    # Добавляем обработчики в логгер
-    logger.addHandler(console_handler)
-    logger.addHandler(file_handler)
-
-    return logger
-
-
-# Пример использования декоратора
-@with_logger_setup
-def main(logger):
-    logger.info('Программа запущена')
-
+setup_logger()
 
 if __name__ == '__main__':
-    # Вызов основного метода
-    main()
+    log_levels: list = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
 
+    # Example on how to change log levels dynamically
+    # This should be replaced with the actual logic for reading the new levels
+    def test_console_level(console_level: str) -> None:
+        new_console_level = console_level
+        change_log_levels(new_console_level)
+
+        # test
+        logger = logging.getLogger(__name__)
+        logger.debug('Log Level Debug!')
+        logger.info('Log Level Info!')
+        logger.warning('Log Level Warning!')
+        logger.error('Log Level Error!')
+        logger.critical('Log Level Critical!')
+        logger.critical('')
+
+
+    for level in log_levels:
+        test_console_level(level)

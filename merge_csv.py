@@ -1,36 +1,31 @@
-__author__ = 'InfSub'
-__contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
-__date__ = '2025/05/02'
-__deprecated__ = False
-__email__ = 'ADmin@TkYD.ru'
-__maintainer__ = 'InfSub'
-__status__ = 'Production'  # 'Production / Development'
-__version__ = '1.7.3.0'
-
+# __author__ = 'InfSub'
+# __contact__ = 'ADmin@TkYD.ru'
+# __copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
+# __date__ = '2025/06/12'
+# __deprecated__ = False
+# __email__ = 'ADmin@TkYD.ru'
+# __maintainer__ = 'InfSub'
+# __status__ = 'Production'  # 'Production / Development'
+# __version__ = '1.7.3.1'
 
 from io import StringIO
 from asyncio import gather as aio_gather, run as aio_run, create_task as aio_create_task, Task as aio_Task
-# from asyncio import sleep as aio_sleep
 from typing import Dict, List, Optional, Union
 from pandas import concat, read_csv, Series, DataFrame, notna
 from decimal import Decimal, ROUND_HALF_UP
 from aiofiles import open as aio_open
 from os.path import dirname, getmtime, join as os_join
-from os import walk
+from os import walk as os_walk
 from re import match, search
 from datetime import datetime, timedelta
 from shutil import copy as shutil_copy
-# import aiohttp
-# from pprint import pprint
 
-from config import get_csv_config
-from logger import configure_logging
+from config import Config
+from logger import logging
 from send_msg import send_telegram_message
 
 
-# Загрузка логгера с настройками
-logging = configure_logging()
+logging = logging.getLogger(__name__)
 
 
 async def check_file_modification(file_path: str) -> None:
@@ -39,7 +34,7 @@ async def check_file_modification(file_path: str) -> None:
     превышения установленного лимита времени неактивности.
 
     :param file_path: Путь к файлу, который необходимо проверить на предмет последней модификации.
-    :type file_path: str
+    :ptype file_path: str
 
     Функция выполняет следующие действия:
         1. Получает время последней модификации файла.
@@ -50,7 +45,7 @@ async def check_file_modification(file_path: str) -> None:
 
     :return: None
     """
-    env: Dict[str: str] = get_csv_config()
+    env: Dict[str: str] = Config().get_config('inactivity')
     # Получаем время последней модификации файла
     file_mod_time: datetime = datetime.fromtimestamp(getmtime(file_path))
     current_time: datetime = datetime.now()
@@ -88,7 +83,7 @@ async def read_file_lines(file_path: str) -> Optional[List[str]]:
     Асинхронная функция для чтения строк из файла.
 
     :param file_path: Путь к файлу, строки которого необходимо прочитать.
-    :type file_path: str
+    :ptype file_path: str
 
     Функция выполняет следующие действия:
         1. Открывает файл в асинхронном режиме для чтения с кодировкой 'utf-8'.
@@ -121,7 +116,7 @@ async def process_headers(header_line: str) -> List[str]:
     Асинхронная функция для обработки строки заголовков CSV и фильтрации пустых заголовков.
 
     :param header_line: Строка, содержащая заголовки, разделенные заданным разделителем.
-    :type header_line: str
+    :ptype header_line: str
 
     Функция выполняет следующие действия:
         1. Удаляет начальные и конечные пробелы в строке заголовков.
@@ -132,7 +127,7 @@ async def process_headers(header_line: str) -> List[str]:
     :rtype: List[str]
     """
     # await aio_sleep(0)  # Предполагается, что это асинхронная пауза для имитации работы
-    env: Dict[str: str] = get_csv_config()
+    env: Dict[str: str] = Config().get_config('csv')
     headers = header_line.strip().split(env.get('csv_separator', ';'))  # Разделяем строку заголовков
     return [header for header in headers if header.strip()]  # Возвращаем непустые заголовки
 
@@ -142,7 +137,7 @@ async def load_header_template(template_path: str) -> List[str]:
     Асинхронная функция для загрузки и обработки шаблона заголовка из файла.
 
     :param template_path: Путь к файлу шаблона, который необходимо загрузить.
-    :type template_path: str
+    :ptype template_path: str
 
     Функция выполняет следующие действия:
         1. Асинхронно считывает строки из указанного файла шаблона.
@@ -165,7 +160,8 @@ async def read_csv_async(file_path: str) -> Optional[DataFrame]:
     Асинхронная функция для чтения CSV-файла и возвращения DataFrame, содержащего только столбцы с корректными заголовками.
 
     :param file_path: Путь к CSV-файлу, который необходимо прочитать.
-    :type file_path: str
+    :ptype file_path: str
+
     :return: DataFrame, содержащий данные из файла с корректными заголовками, или None, если файл пуст.
     :rtype: Optional[DataFrame]
 
@@ -178,7 +174,7 @@ async def read_csv_async(file_path: str) -> Optional[DataFrame]:
         6. Объединяет очищенные строки данных.
         7. Создает DataFrame из очищенных данных, используя только непустые заголовки для чтения.
     """
-    env: Dict[str: str] = get_csv_config()
+    env: Dict[str: str] = Config().get_config('csv')
     logging.info(f'Reading file: {file_path}')
     lines = await read_file_lines(file_path)
     if not lines:
@@ -201,7 +197,7 @@ async def read_csv_async(file_path: str) -> Optional[DataFrame]:
 
     # Читаем данные в DataFrame, используя только непустые заголовки
     df = read_csv(
-        StringIO(content), sep=env['csv_separator'], names=valid_headers, usecols=valid_headers, header=None, skiprows=1)
+        StringIO(content), sep=env['csv_separator'], names=valid_headers, usecols=valid_headers, header=None)
 
     return df
 
@@ -211,9 +207,9 @@ async def sort_columns_by_template(df: DataFrame, header_template: List[str]) ->
     Асинхронная функция для фильтрации и сортировки столбцов DataFrame на основе заданного шаблона заголовков.
 
     :param df: DataFrame, столбцы которого необходимо отсортировать и отфильтровать.
-    :type df: DataFrame
+    :ptype df: DataFrame
     :param header_template: Список строк с именами столбцов, определяющий порядок и фильтрацию столбцов DataFrame.
-    :type header_template: List[str]
+    :ptype header_template: List[str]
 
     Функция выполняет следующие действия:
         1. Использует шаблон заголовков для фильтрации столбцов DataFrame.
@@ -239,13 +235,13 @@ def safe_sum(series: Series, decimal_places: Optional[int] = None) -> float:
     десятичных знаков.
 
     :param series: Серия данных, содержащая числовые значения, которые необходимо суммировать.
-    :type series: Series
+    :ptype series: Series
     :param decimal_places: Количество знаков после запятой, до которого нужно округлить итоговую сумму.
                            Если None, то округление не выполняется.
-    :type decimal_places: Optional[int]
+    :ptype decimal_places: Optional[int]
 
     :return: Итоговая сумма значений в серии, округленная до указанного количества десятичных знаков (если применимо).
-    :rtype: float
+    :rtype: Float
 
     Функция выполняет следующие действия:
         1. Инициализирует переменную total, представляющую собой сумму, с нулевым значением типа Decimal.
@@ -269,9 +265,9 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
     Функция для извлечения значения ширины из строки данных и проверки его валидности.
 
     :param row: Строка данных, содержащая информацию о продукте, включая ширину и описание.
-    :type row: Series
+    :ptype row: Series
     :param tasks: Список задач (asyncio.Task), который будет дополнен задачами отправки уведомлений при обнаружении ошибки.
-    :type tasks: List[aio_Task]
+    :ptype tasks: List[aio_Task]
 
     :return: Извлеченное значение ширины или None, если значение не удалось извлечь или оно некорректно.
     :rtype: Union[float, None]
@@ -283,7 +279,7 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
         4. Если значение не соответствует допустимому диапазону, генерирует предупреждающее сообщение и создает задачу для отправки уведомления в Telegram.
         5. Возвращает извлеченное значение ширины или None, если значение не удалось извлечь или оно некорректно.
     """
-    env: Dict[str: str] = get_csv_config()
+    env: Dict[str: int | str] = Config().get_config('datas')
     value: Union[float, None] = None
     key_width: str = 'Packing.Ширина'
     key_description: str = 'Description'
@@ -295,9 +291,9 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
         value = float(found_value.group()) if found_value else None
 
     if value is not None:
-        if not 0 < value <= env['max_width']:
+        if not 0 < value <= env['datas_max_width']:
             message = f'For product "{row["Packing.Barcode"]}", the width value "{value}" was outside the acceptable range. '
-            message += f'Source_File: "{row["Source_File"]}".'
+            message += f'Source: "{row["Source_File"]}".'
             logging.warning(message)
             tasks.append(aio_create_task(send_telegram_message(message)))
 
@@ -309,7 +305,7 @@ def extract_compound(row: Series) -> Union[str, None]:
     Функция для извлечения информации о составе упаковки из столбца 'Packing.Состав' или 'AdditionalDescription'.
 
     :param row: Строка данных, содержащая столбцы 'Packing.Состав' и 'AdditionalDescription'.
-    :type row: Series
+    :ptype row: Series
 
     :return: Извлеченное значение состава или None, если значение не удалось извлечь или оно некорректно.
     :rtype: Union[str, None]
@@ -338,7 +334,7 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
     Асинхронная функция для объединения нескольких CSV-файлов в один DataFrame с обработкой и фильтрацией данных.
 
     :param files_dict: Словарь, где ключи - это названия файлов, а значения - пути к CSV-файлам.
-    :type files_dict: Dict[str, str]
+    :ptype files_dict: Dict[str, str]
 
     Функция выполняет следующие действия:
         1. Асинхронно читает данные из указанных CSV-файлов и создает список DataFrame.
@@ -354,7 +350,7 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
     :return: Возвращает объединенный и обработанный DataFrame или None, если не удалось объединить данные.
     :rtype: Optional[DataFrame]
     """
-    env: Dict[str: str] = get_csv_config()
+    env: Dict[str: int | str] = Config().get_config('datas')
     dataframes = await aio_gather(*[read_csv_async(file_path) for file_path in files_dict.values()])
     dataframes = [df for df in dataframes if df is not None]
 
@@ -376,10 +372,10 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
 
     # Обновление столбца "Наименование" только в случае, если new_name_value определено и не пусто
     message = 'The value of the cells in the "Наименование" column has'
-    if env['name_of_product_type']:
-        combined_df['Наименование'] = env['name_of_product_type']
+    if env['datas_name_of_product_type']:
+        combined_df['Наименование'] = env['datas_name_of_product_type']
         logging.warning(
-            f'{message} been replaced with "{env['name_of_product_type']}"')
+            f'{message} been replaced with "{env['datas_name_of_product_type']}"')
     else:
         logging.warning(
             f'{message} not been changed, the "CSV_NEW_NAME_VALUE" constant is empty.')
@@ -407,8 +403,8 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
     # Группировка и агрегация
     grouped_df = combined_df.groupby('Packing.Barcode', as_index=False).agg(
         {
-            'Packing.Колво': lambda x: safe_sum(x, env['decimal_places']),
-            'Packing.СвободныйОстаток': lambda x: safe_sum(x, env['decimal_places']),
+            'Packing.Колво': lambda x: safe_sum(x, env['datas_decimal_places']),
+            'Packing.СвободныйОстаток': lambda x: safe_sum(x, env['datas_decimal_places']),
             **{col: 'first' for col in first_columns},
             **{col: lambda x: ', '.join(filter(None, x)) for col in combined_df.columns if col.startswith('Storage_')}
         }
@@ -422,14 +418,14 @@ async def save_dataframe_to_csv(df: 'DataFrame', output_path: str) -> None:
     Асинхронная функция для сохранения объекта DataFrame в CSV файл.
 
     :param df: DataFrame, который необходимо сохранить.
-    :type df: DataFrame
+    :ptype df: DataFrame
     :param output_path: Путь, по которому будет сохранен CSV файл.
-    :type output_path: str
+    :ptype output_path: str
 
     Функция выполняет следующее действие:
         - Сохраняет переданный DataFrame в файл формата CSV по указанному пути, используя разделитель, заданный в переменной окружения 'csv_separator'.
     """
-    env: Dict[str: str] = get_csv_config()
+    env: Dict[str: int | str] = Config().get_config('csv')
     df.to_csv(output_path, index=False, sep=env.get('csv_separator', ';'))
 
 
@@ -451,7 +447,7 @@ async def find_matching_files(directory: str, pattern: str) -> dict:
         3. Если файл соответствует шаблону, добавляет его имя и полный путь в словарь результатов.
     """
     files_dict = {}
-    for root, dirs, files in walk(directory):
+    for root, dirs, files in os_walk(directory):
         for file in files:
             if match(pattern, file):
                 file_path = os_join(root, file)
@@ -473,7 +469,7 @@ def get_valid_file_name() -> Optional[str]:
     :return: Имя файла в виде строки или None, если ни одна из переменных окружения не содержит имени файла.
     :rtype: Optional[str]
     """
-    env: Dict[str: str] = get_csv_config()
+    env: Dict[str: int | str] = Config().get_config('csv')
     csv_file_name = env.get('csv_file_name', '')
     csv_file_name_for_dta = env.get('csv_file_name_for_dta', '')
 
@@ -494,9 +490,9 @@ async def copy_file(src: str, dst: str) -> None:
     Если копирование не удалось, логируется сообщение об ошибке с описанием исключения.
 
     :param src: Путь к исходному файлу, который необходимо скопировать.
-    :type src: str
+    :ptype src: str
     :param dst: Путь, куда должен быть скопирован файл.
-    :type dst: str
+    :ptype dst: str
     """
     try:
         shutil_copy(src, dst)
@@ -512,7 +508,7 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
     сохраняет результат в новый CSV файл.
 
     :param header_template_path: Путь к файлу с шаблоном заголовка, который используется для сортировки столбцов.
-    :type header_template_path: str
+    :ptype header_template_path: str
 
     Функция выполняет следующие шаги:
         1. Загружает шаблон заголовка для сортировки столбцов.
@@ -533,7 +529,7 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
 
     :return: None
     """
-    env: Dict[str: str] = get_csv_config()
+    env: Dict[str: int | str] = Config().get_config('csv')
     header_template = await load_header_template(header_template_path)
     
     files_dict = await find_matching_files(env['csv_path_directory'], env['csv_file_pattern'])
@@ -577,7 +573,7 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
 
 async def run_merge() -> None:
     logging.info('Run Script!')
-    env = get_csv_config()
+    env: Dict[str: int | str] = Config().get_config('csv')
     path = str(os_join(env['csv_path_template_directory'], env['csv_file_name_for_dta']))
     await process_and_save_all_csv(path)
     await send_telegram_message('CSV files merged completed successfully.')

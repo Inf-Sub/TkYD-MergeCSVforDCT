@@ -1,95 +1,118 @@
-__author__ = 'InfSub'
-__contact__ = 'ADmin@TkYD.ru'
-__copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
-__date__ = '2025/02/26'
-__deprecated__ = False
-__email__ = 'ADmin@TkYD.ru'
-__maintainer__ = 'InfSub'
-__status__ = 'Production'
-__version__ = '1.7.2.2'
+# __author__ = 'InfSub'
+# __contact__ = 'https:/t.me/InfSub'
+# __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
+# __date__ = '2025/06/01'
+# __deprecated__ = False
+# __maintainer__ = 'InfSub'
+# __status__ = 'Development'  # 'Production / Development'
+# __version__ = '1.7.2.2'
 
 from os import getenv
+from typing import Dict, Any
+
 from dotenv import load_dotenv
-
-# Загрузка переменных окружения из файла .env
-load_dotenv()
-
-
-def load_env() -> dict:
-    """
-    Загрузка переменных окружения из файла .env.
-    """
-    # Загрузка всех переменных, которые могут понадобиться в проекте
-    return {
-        'CSV_SEPARATOR': getenv('CSV_SEPARATOR'),
-        'CSV_PATH_TEMPLATE_DIRECTORY': getenv('CSV_PATH_TEMPLATE_DIRECTORY'),
-        'CSV_PATH_DIRECTORY': getenv('CSV_PATH_DIRECTORY'),
-        'CSV_FILE_PATTERN': getenv('CSV_FILE_PATTERN'),
-        # 'CSV_FILE_NAME': getenv('CSV_FILE_NAME', ''),
-        'CSV_FILE_NAME_FOR_DTA': getenv('CSV_FILE_NAME_FOR_DTA', ''),
-        'CSV_FILE_NAME_FOR_CHECKER': getenv('CSV_FILE_NAME_FOR_CHECKER', ''),
-        
-        'MAX_WIDTH': int(getenv('MAX_WIDTH', 200)),
-        'DECIMAL_PLACES': int(getenv('DECIMAL_PLACES', 2)),
-        'NAME_OF_PRODUCT_TYPE': getenv('NAME_OF_PRODUCT_TYPE'),
-        'INACTIVITY_LIMIT_HOURS': int(getenv('INACTIVITY_LIMIT_HOURS', 24)),
-        
-        'TELEGRAM_TOKEN': getenv('TELEGRAM_TOKEN'),
-        'TELEGRAM_CHAT_ID': getenv('TELEGRAM_CHAT_ID'),
-
-        'LOG_DIR': getenv('LOG_DIRECTORY', 'logs'),
-        'LOG_LEVEL_CONSOLE': getenv('LOG_LEVEL_CONSOLE', 'WARNING'),
-        'LOG_LEVEL_FILE': getenv('LOG_LEVEL_FILE', 'WARNING'),
-
-    }
+from datetime import datetime as dt
+import logging
 
 
-def get_csv_config() -> dict:
-    """
-    Получение парамметров для CSV.
-    """
-    env = load_env()
-    return {
-        'csv_separator': env['CSV_SEPARATOR'],
-        'csv_path_template_directory': env['CSV_PATH_TEMPLATE_DIRECTORY'],
-        'csv_path_directory': env['CSV_PATH_DIRECTORY'],
-        'csv_file_pattern': env['CSV_FILE_PATTERN'],
-        # 'csv_file_name': env['CSV_FILE_NAME'],
-        'csv_file_name_for_dta': env['CSV_FILE_NAME_FOR_DTA'],
-        'csv_file_name_for_checker': env['CSV_FILE_NAME_FOR_CHECKER'],
-        
-        'max_width': env['MAX_WIDTH'],
-        'decimal_places': env['DECIMAL_PLACES'],
-        'name_of_product_type': env['NAME_OF_PRODUCT_TYPE'],
-        'inactivity_limit_hours': env['INACTIVITY_LIMIT_HOURS']
-    }
+class Config:
+    """Синглтон для загрузки и хранения конфигурации приложения."""
+    _instance = None
+    
+    def __new__(cls, *args, **kwargs) -> 'Config':
+        """Создает новый экземпляр класса Config, если он еще не создан.
+
+        :param args: Позиционные аргументы.
+        :param kwargs: Именованные аргументы.
+        :return: Экземпляр класса Config.
+        """
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        """Инициализация экземпляра Config.
+
+        Загружает переменные окружения из файла ._env и инициализирует параметры.
+        """
+        # Проверяем, инициализирован ли уже экземпляр
+        if not hasattr(self, '_initialized'):
+            self._initialized = True  # Устанавливаем флаг инициализации
+            logging.info('Загрузка переменных окружения из файла ._env')
+            load_dotenv()
+            self._current_date = dt.now()
+            self._env = self._load_env()
+    
+    def _load_env(self) -> Dict[str, Any]:
+        """
+        Загрузка переменных окружения из файла ._env.
+
+        :return: Возвращает словарь с параметрами из файла ._env.
+        """
+        current_date = self._current_date
+        try:
+            return {
+                'CSV_SEPARATOR': getenv('CSV_SEPARATOR'),
+                'CSV_PATH_TEMPLATE_DIRECTORY': getenv('CSV_PATH_TEMPLATE_DIRECTORY'),
+                'CSV_PATH_DIRECTORY': getenv('CSV_PATH_DIRECTORY'),
+                'CSV_FILE_PATTERN': getenv('CSV_FILE_PATTERN'),
+                # 'CSV_FILE_NAME': getenv('CSV_FILE_NAME', ''),
+                'CSV_FILE_NAME_FOR_DTA': getenv('CSV_FILE_NAME_FOR_DTA', ''),
+                'CSV_FILE_NAME_FOR_CHECKER': getenv('CSV_FILE_NAME_FOR_CHECKER', ''),
+
+                'DATAS_MAX_WIDTH': int(getenv('DATAS_MAX_WIDTH', 200)),
+                'DATAS_DECIMAL_PLACES': int(getenv('DATAS_DECIMAL_PLACES', 2)),
+                'DATAS_NAME_OF_PRODUCT_TYPE': getenv('DATAS_NAME_OF_PRODUCT_TYPE'),
+
+                'INACTIVITY_LIMIT_HOURS': int(getenv('INACTIVITY_LIMIT_HOURS', 24)),
+                
+                'TELEGRAM_TOKEN': getenv('TELEGRAM_TOKEN'),
+                'TELEGRAM_CHAT_ID': getenv('TELEGRAM_CHAT_ID'),
+
+                'MSG_LANGUAGE': getenv('MSG_LANGUAGE', 'en').lower(),
+
+                'LOG_DIR': current_date.strftime(getenv('LOG_DIR', r'logs\%Y\%Y.%m')),
+                'LOG_FILE': current_date.strftime(getenv('LOG_FILE', 'backup_log_%Y.%m.%d.log')),
+                'LOG_LEVEL_ROOT': getenv('LOG_LEVEL_ROOT', 'INFO').upper(),
+                'LOG_LEVEL_CONSOLE': getenv('LOG_LEVEL_CONSOLE', 'INFO').upper(),
+                'LOG_LEVEL_FILE': getenv('LOG_LEVEL_FILE', 'WARNING').upper(),
+                'LOG_IGNORE_LIST': getenv('LOG_IGNORE_LIST', ''),
+                'LOG_FORMAT_CONSOLE': getenv('LOG_FORMAT_CONSOLE').replace(r'\t', '\t').replace(r'\n', '\n'),
+                'LOG_FORMAT_FILE': getenv('LOG_FORMAT_FILE').replace(r'\t', '\t').replace(r'\n', '\n'),
+                'LOG_DATE_FORMAT': getenv('LOG_DATE_FORMAT', '%Y.%m.%d %H:%M:%S'),  # Default: None
+                'LOG_CONSOLE_LANGUAGE': getenv('MSG_LANGUAGE', 'en').lower(),  # temp
+            }
+        except (TypeError, ValueError) as e:
+            logging.error(e)
+            exit()
+    
+    def get_config(self, *config_types: str) -> Dict[str, Any]:
+        """
+        Получение конфигурации по указанным типам.
+
+        :param config_types: Префиксы для поиска переменных окружения.
+        :return: Возвращает словарь с параметрами, соответствующими указанным префиксам.
+        """
+        result = {}
+        for config_type in config_types:
+            result.update(
+                {key.lower(): self._env[key] for key in self._env.keys() if key.startswith(config_type.upper() + '_')})
+        return result
 
 
-def get_log_config() -> dict:
-    """
-    Получение конфигурации для логгера.
-    """
-    env = load_env()
-    return {
-        'dir': env['LOG_DIR'],
-        'level_console': env['LOG_LEVEL_CONSOLE'],
-        'level_file': env['LOG_LEVEL_FILE'],
-    }
-
-
-def get_telegram_config() -> dict:
-    """
-    Получение конфигурации для Telegram.
-    """
-    env = load_env()
-    return {
-        'telegram_token': env['TELEGRAM_TOKEN'],
-        'telegram_chat_id': env['TELEGRAM_CHAT_ID'],
-    }
-
-
-if __name__ == '__main__':
-    # print('Database Config:', get_db_config())
-    # print('SMB Config:', get_smb_config())
-    # print('Schedule Config:', get_schedule_config())
-    pass
+if __name__ == "__main__":
+    from pprint import pprint
+    
+    config = Config()
+    server_config = config.get_config('SERVER')
+    backup_files_config = config.get_config('FILES')
+    log_config = config.get_config('LOG')
+    
+    print("Server Config:")
+    pprint(server_config)
+    print()
+    print("Backup Files Config:")
+    pprint(backup_files_config)
+    print()
+    print("Log Config:")
+    pprint(log_config)
