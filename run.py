@@ -1,11 +1,11 @@
 # __author__ = 'InfSub'
 # __contact__ = 'https:/t.me/InfSub'
 # __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/04/30'
+# __date__ = '2025/06/16'
 # __deprecated__ = False
-# __maintainer__ = 'InfSub'
+__maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.7.6'
+# __version__ = '1.7.6.1'
 
 from sys import platform
 from subprocess import check_call
