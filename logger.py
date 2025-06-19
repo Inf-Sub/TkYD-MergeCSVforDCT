@@ -1,11 +1,11 @@
 # __author__ = 'InfSub'
 # __contact__ = 'https:/t.me/InfSub'
 # __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/02'
+# __date__ = '2025/06/19'
 # __deprecated__ = False
 # __maintainer__ = 'InfSub'
 # __status__ = 'Development'  # 'Production / Development'
-# __version__ = '1.0.6.2'
+# __version__ = '1.0.7.0'
 
 import logging
 import logging.config
@@ -15,7 +15,7 @@ from typing import List, Dict
 from os.path import join as os_join
 from datetime import datetime as dt
 
-from config import Config
+from config import Config, ConfigNames
 
 
 def setup_logger(log_path: str | None = None) -> str | None:
@@ -26,7 +26,7 @@ def setup_logger(log_path: str | None = None) -> str | None:
 
     :return: None
     """
-    env: Dict[str: str] = Config().get_config('log')
+    env: Dict[str: str] = Config().get_config(ConfigNames.LOG)
 
     log_level_console: str = env.get('log_level_console')
     log_level_file: str = env.get('log_level_file')
@@ -35,8 +35,9 @@ def setup_logger(log_path: str | None = None) -> str | None:
     log_format_file: str = env.get('log_format_file')
     log_date_format: str = env.get('log_date_format')
     log_console_language: str = env.get('log_console_language')
-    log_dir = env.get('log_dir', r'logs\%Y\%Y.%m')
-    log_file = env.get('log_file', 'backup_log_%Y.%m.%d.log')
+    log_dir: str = env.get('log_dir', r'logs\%Y\%Y.%m')
+    log_file: str = env.get('log_file', 'backup_log_%Y.%m.%d.log')
+    log_ignore_list: List[str] = env.get('log_ignore_list', [])
 
     if log_path is None:
         log_path = os_join(log_dir, log_file)
@@ -102,9 +103,9 @@ def setup_logger(log_path: str | None = None) -> str | None:
         logging.error(f'Error configuring logging: {e}')
         return None
 
-    log_ignore_list: List[str] = [
-        # 'smbprotocol'
-    ]
+    # log_ignore_list: List[str] = [
+    #     # 'smbprotocol'
+    # ]
 
     for logger_name in log_ignore_list:
         logging.getLogger(logger_name).setLevel(logging.WARNING)

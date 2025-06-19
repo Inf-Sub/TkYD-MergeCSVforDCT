@@ -1,12 +1,12 @@
 # __author__ = 'InfSub'
 # __contact__ = 'ADmin@TkYD.ru'
 # __copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/12'
+# __date__ = '2025/06/19'
 # __deprecated__ = False
 # __email__ = 'ADmin@TkYD.ru'
 # __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.7.3.1'
+# __version__ = '1.7.4.0'
 
 from io import StringIO
 from asyncio import gather as aio_gather, run as aio_run, create_task as aio_create_task, Task as aio_Task
@@ -20,9 +20,10 @@ from re import match, search
 from datetime import datetime, timedelta
 from shutil import copy as shutil_copy
 
-from config import Config
+from config import Config, ConfigNames
 from logger import logging
-from send_msg import send_telegram_message
+# from send_msg import send_telegram_message
+from send_msg import TelegramMessenger
 
 
 logging = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ async def check_file_modification(file_path: str) -> None:
 
     :return: None
     """
-    env: Dict[str: str] = Config().get_config('inactivity')
+    _env: Dict[str: str] = Config().get_config(ConfigNames.INACTIVITY)
     # Получаем время последней модификации файла
     file_mod_time: datetime = datetime.fromtimestamp(getmtime(file_path))
     current_time: datetime = datetime.now()
@@ -68,14 +69,15 @@ async def check_file_modification(file_path: str) -> None:
     message: str = f'The file was modified at {file_mod_time}, {time_description} ago.'
     
     # Проверяем разницу во времени
-    if file_mod_delta <= timedelta(hours=env['inactivity_limit_hours']):
+    if file_mod_delta <= timedelta(hours=_env['inactivity_limit_hours']):
         logging.info(message)
     else:
-        message = f'File {file_path} has not been modified for more than {env["inactivity_limit_hours"]} hours. {message}'
+        message = f'File {file_path} has not been modified for more than {_env["inactivity_limit_hours"]} hours. {message}'
         logging.warning(message)
         
         # Отправляем уведомление в Telegram
-        await send_telegram_message(message)
+        # await send_telegram_message(message)
+        await TelegramMessenger().add_message(message)
 
 
 async def read_file_lines(file_path: str) -> Optional[List[str]]:
@@ -127,8 +129,8 @@ async def process_headers(header_line: str) -> List[str]:
     :rtype: List[str]
     """
     # await aio_sleep(0)  # Предполагается, что это асинхронная пауза для имитации работы
-    env: Dict[str: str] = Config().get_config('csv')
-    headers = header_line.strip().split(env.get('csv_separator', ';'))  # Разделяем строку заголовков
+    _env: Dict[str: str] = Config().get_config(ConfigNames.CSV)
+    headers = header_line.strip().split(_env.get('csv_separator', ';'))  # Разделяем строку заголовков
     return [header for header in headers if header.strip()]  # Возвращаем непустые заголовки
 
 
@@ -174,7 +176,8 @@ async def read_csv_async(file_path: str) -> Optional[DataFrame]:
         6. Объединяет очищенные строки данных.
         7. Создает DataFrame из очищенных данных, используя только непустые заголовки для чтения.
     """
-    env: Dict[str: str] = Config().get_config('csv')
+    _env: Dict[str: str] = Config().get_config(ConfigNames.CSV)
+    csv_sep = _env.get('csv_separator', ';')
     logging.info(f'Reading file: {file_path}')
     lines = await read_file_lines(file_path)
     if not lines:
@@ -189,15 +192,13 @@ async def read_csv_async(file_path: str) -> Optional[DataFrame]:
 
     cleaned_data = []
     for line in data_lines:
-        trimmed_line = env['csv_separator'].join(
-            [item.strip() for item in line.rstrip(f'{env['csv_separator']}\n').split(env['csv_separator'])])
+        trimmed_line = csv_sep.join([item.strip() for item in line.rstrip(f'{csv_sep}\n').split(csv_sep)])
         cleaned_data.append(trimmed_line)
     # Объединяем строки обратно в одну строку
     content = '\n'.join(cleaned_data)
 
     # Читаем данные в DataFrame, используя только непустые заголовки
-    df = read_csv(
-        StringIO(content), sep=env['csv_separator'], names=valid_headers, usecols=valid_headers, header=None)
+    df = read_csv(StringIO(content), sep=csv_sep, names=valid_headers, usecols=valid_headers, header=None)
 
     return df
 
@@ -279,7 +280,7 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
         4. Если значение не соответствует допустимому диапазону, генерирует предупреждающее сообщение и создает задачу для отправки уведомления в Telegram.
         5. Возвращает извлеченное значение ширины или None, если значение не удалось извлечь или оно некорректно.
     """
-    env: Dict[str: int | str] = Config().get_config('datas')
+    _env: Dict[str: int | str] = Config().get_config(ConfigNames.DATAS)
     value: Union[float, None] = None
     key_width: str = 'Packing.Ширина'
     key_description: str = 'Description'
@@ -291,11 +292,11 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
         value = float(found_value.group()) if found_value else None
 
     if value is not None:
-        if not 0 < value <= env['datas_max_width']:
+        if not 0 < value <= _env['datas_max_width']:
             message = f'For product "{row["Packing.Barcode"]}", the width value "{value}" was outside the acceptable range. '
             message += f'Source: "{row["Source_File"]}".'
             logging.warning(message)
-            tasks.append(aio_create_task(send_telegram_message(message)))
+            tasks.append(aio_create_task(TelegramMessenger().add_message(message)))
 
     return value
 
@@ -350,7 +351,7 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
     :return: Возвращает объединенный и обработанный DataFrame или None, если не удалось объединить данные.
     :rtype: Optional[DataFrame]
     """
-    env: Dict[str: int | str] = Config().get_config('datas')
+    _env: Dict[str: int | str] = Config().get_config(ConfigNames.DATAS)
     dataframes = await aio_gather(*[read_csv_async(file_path) for file_path in files_dict.values()])
     dataframes = [df for df in dataframes if df is not None]
 
@@ -372,10 +373,10 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
 
     # Обновление столбца "Наименование" только в случае, если new_name_value определено и не пусто
     message = 'The value of the cells in the "Наименование" column has'
-    if env['datas_name_of_product_type']:
-        combined_df['Наименование'] = env['datas_name_of_product_type']
+    if _env['datas_name_of_product_type']:
+        combined_df['Наименование'] = _env['datas_name_of_product_type']
         logging.warning(
-            f'{message} been replaced with "{env['datas_name_of_product_type']}"')
+            f'{message} been replaced with "{_env['datas_name_of_product_type']}"')
     else:
         logging.warning(
             f'{message} not been changed, the "CSV_NEW_NAME_VALUE" constant is empty.')
@@ -403,8 +404,8 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
     # Группировка и агрегация
     grouped_df = combined_df.groupby('Packing.Barcode', as_index=False).agg(
         {
-            'Packing.Колво': lambda x: safe_sum(x, env['datas_decimal_places']),
-            'Packing.СвободныйОстаток': lambda x: safe_sum(x, env['datas_decimal_places']),
+            'Packing.Колво': lambda x: safe_sum(x, _env['datas_decimal_places']),
+            'Packing.СвободныйОстаток': lambda x: safe_sum(x, _env['datas_decimal_places']),
             **{col: 'first' for col in first_columns},
             **{col: lambda x: ', '.join(filter(None, x)) for col in combined_df.columns if col.startswith('Storage_')}
         }
@@ -413,7 +414,7 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
     return grouped_df
 
 
-async def save_dataframe_to_csv(df: 'DataFrame', output_path: str) -> None:
+async def save_dataframe_to_csv(df: 'DataFrame', output_path: str, sep: str) -> None:
     """
     Асинхронная функция для сохранения объекта DataFrame в CSV файл.
 
@@ -421,12 +422,13 @@ async def save_dataframe_to_csv(df: 'DataFrame', output_path: str) -> None:
     :ptype df: DataFrame
     :param output_path: Путь, по которому будет сохранен CSV файл.
     :ptype output_path: str
+    :param sep: CSV разделитель столбцов.
+    :ptype sep: str
 
     Функция выполняет следующее действие:
         - Сохраняет переданный DataFrame в файл формата CSV по указанному пути, используя разделитель, заданный в переменной окружения 'csv_separator'.
     """
-    env: Dict[str: int | str] = Config().get_config('csv')
-    df.to_csv(output_path, index=False, sep=env.get('csv_separator', ';'))
+    df.to_csv(output_path, index=False, sep=sep)
 
 
 async def find_matching_files(directory: str, pattern: str) -> dict:
@@ -469,7 +471,7 @@ def get_valid_file_name() -> Optional[str]:
     :return: Имя файла в виде строки или None, если ни одна из переменных окружения не содержит имени файла.
     :rtype: Optional[str]
     """
-    env: Dict[str: int | str] = Config().get_config('csv')
+    env: Dict[str: int | str] = Config().get_config(ConfigNames.CSV)
     csv_file_name = env.get('csv_file_name', '')
     csv_file_name_for_dta = env.get('csv_file_name_for_dta', '')
 
@@ -529,10 +531,10 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
 
     :return: None
     """
-    env: Dict[str: int | str] = Config().get_config('csv')
+    _env: Dict[str: int | str] = Config().get_config(ConfigNames.CSV)
     header_template = await load_header_template(header_template_path)
     
-    files_dict = await find_matching_files(env['csv_path_directory'], env['csv_file_pattern'])
+    files_dict = await find_matching_files(_env['csv_path_directory'], _env['csv_file_pattern'])
     logging.info(f'Found {len(files_dict)} files matching the pattern.')
     
     if files_dict:
@@ -554,15 +556,16 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
                     csv_file_name = get_valid_file_name()
                     if csv_file_name:
                         output_path = os_join(dirname(file_path), csv_file_name)
-                        await save_dataframe_to_csv(current_df, output_path)
-                        logging.info(f"Saved merged file to {output_path}")
+                        await save_dataframe_to_csv(current_df, output_path, _env.get('csv_separator', ';'))
+                        logging.info(f'Saved merged file to {output_path}')
                         
-                        csv_file_name_for_checker = env.get('csv_file_name_for_checker', '')
+                        csv_file_name_for_checker = _env.get('csv_file_name_for_checker', '')
                         if csv_file_name_for_checker:
                             checker_path = os_join(dirname(file_path), csv_file_name_for_checker)
                             await copy_file(output_path, checker_path)
                     else:
-                        logging.warning(f'Both CSV_FILE_NAME and CSV_FILE_NAME_FOR_DTA are empty for file {file_name}.')
+                        logging.warning(
+                            f'Both "CSV_FILE_NAME" and "CSV_FILE_NAME_FOR_DTA" are empty for file {file_name}.')
                 else:
                     logging.warning(f'Missing expected column {place_column} for file {file_name}.')
         else:
@@ -573,10 +576,12 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
 
 async def run_merge() -> None:
     logging.info('Run Script!')
-    env: Dict[str: int | str] = Config().get_config('csv')
-    path = str(os_join(env['csv_path_template_directory'], env['csv_file_name_for_dta']))
+    _env: Dict[str: int | str] = Config().get_config(ConfigNames.CSV)
+    path = str(os_join(_env['csv_path_template_directory'], _env['csv_file_name_for_dta']))
     await process_and_save_all_csv(path)
-    await send_telegram_message('CSV files merged completed successfully.')
+    # await send_telegram_message('CSV files merged completed successfully.')
+    await TelegramMessenger().add_message('CSV files merged completed successfully.')
+    await TelegramMessenger().flush()
     logging.info('Finished Script!')
 
 
