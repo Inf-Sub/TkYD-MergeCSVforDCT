@@ -6,11 +6,11 @@
 # __email__ = 'ADmin@TkYD.ru'
 # __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.7.4.0'
+# __version__ = '1.7.4.2'
 
 from io import StringIO
 from asyncio import gather as aio_gather, run as aio_run, create_task as aio_create_task, Task as aio_Task
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 from pandas import concat, read_csv, Series, DataFrame, notna
 from decimal import Decimal, ROUND_HALF_UP
 from aiofiles import open as aio_open
@@ -22,8 +22,7 @@ from shutil import copy as shutil_copy
 
 from config import Config, ConfigNames
 from logger import logging
-# from send_msg import send_telegram_message
-from send_msg import TelegramMessenger
+from send_msg import TelegramMessenger, MessageState
 
 
 logging = logging.getLogger(__name__)
@@ -32,7 +31,7 @@ logging = logging.getLogger(__name__)
 async def check_file_modification(file_path: str) -> None:
     """
     Асинхронная функция для проверки времени последней модификации файла и отправки уведомления в случае
-    превышения установленного лимита времени неактивности.
+    превышения установленного лимита времени не активности.
 
     :param file_path: Путь к файлу, который необходимо проверить на предмет последней модификации.
     :ptype file_path: str
@@ -41,8 +40,8 @@ async def check_file_modification(file_path: str) -> None:
         1. Получает время последней модификации файла.
         2. Вычисляет разницу времени между текущим моментом и временем последней модификации файла.
         3. Формирует строку с описанием времени, прошедшего с момента модификации.
-        4. Логирует информацию о времени последней модификации файла.
-        5. Если файл не изменялся дольше, чем установлено в лимите времени неактивности, отправляет предупреждение в лог и уведомление в Telegram.
+        4. Записывает в лог информацию о времени последней модификации файла.
+        5. Если файл не изменялся дольше, чем установлено в лимите, отправляет предупреждение в лог и в Telegram.
 
     :return: None
     """
@@ -60,24 +59,27 @@ async def check_file_modification(file_path: str) -> None:
     time_components: List[str] = []
     
     if days > 0:
-        time_components.append(f'{days} days')
+        time_components.append(f'*{days}* days')
     if hours > 0:
-        time_components.append(f'{hours} hours')
-    time_components.append(f'{minutes} minutes')
+        time_components.append(f'*{hours}* hours')
+    time_components.append(f'*{minutes}* minutes')
     
     time_description: str = ', '.join(time_components)
-    message: str = f'The file was modified at {file_mod_time}, {time_description} ago.'
+    file_mod_date = file_mod_time.strftime('%y.%d.%m %H:%M:%S')
+    message: str = f'*The file was modified at:*\n{file_mod_date}\n{time_description} ago.'
     
     # Проверяем разницу во времени
     if file_mod_delta <= timedelta(hours=_env['inactivity_limit_hours']):
-        logging.info(message)
+        logging.info(message.replace('\n', ' ').replace('*', '').replace('`', ''))
     else:
-        message = f'File {file_path} has not been modified for more than {_env["inactivity_limit_hours"]} hours. {message}'
-        logging.warning(message)
+        message = (
+            f'*File:*```\n{file_path} ```has not been modified for more than *{_env["inactivity_limit_hours"]}* '
+            f'hours.\n\n{message}')
+        logging.warning(message.replace('\n', ' ').replace('*', '').replace('`', ''))
         
         # Отправляем уведомление в Telegram
         # await send_telegram_message(message)
-        await TelegramMessenger().add_message(message)
+        await TelegramMessenger().add_message(f'🟥️ {message}')
 
 
 async def read_file_lines(file_path: str) -> Optional[List[str]]:
@@ -93,9 +95,9 @@ async def read_file_lines(file_path: str) -> Optional[List[str]]:
         3. Возвращает список строк, если файл не пустой. Если файл пуст, возвращает None.
     
     Обработка исключений:
-        - Логирует ошибку, если файл не найден.
-        - Логирует ошибку, если доступ к файлу запрещен.
-        - Логирует общую ошибку, если происходит другая неисправность во время чтения.
+        - Записывает в лог ошибку, если файл не найден.
+        - Записывает в лог ошибку, если доступ к файлу запрещен.
+        - Записывает в лог общую ошибку, если происходит другая неисправность во время чтения.
 
     :return: Список строк из файла или None, если файл пуст или произошла ошибка.
     :rtype: Optional[List[str]]
@@ -261,7 +263,7 @@ def safe_sum(series: Series, decimal_places: Optional[int] = None) -> float:
     return float(total)
 
 
-def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
+def extract_width(row: Series, tasks: List[aio_Task]) -> Optional[float]:
     """
     Функция для извлечения значения ширины из строки данных и проверки его валидности.
 
@@ -271,17 +273,17 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
     :ptype tasks: List[aio_Task]
 
     :return: Извлеченное значение ширины или None, если значение не удалось извлечь или оно некорректно.
-    :rtype: Union[float, None]
+    :rtype: Optional[float]
 
     Функция выполняет следующие действия:
         1. Проверяет наличие и тип данных в поле ширины ('Packing.Ширина'). Если значение является числом (int, float), оно извлекается.
         2. Если значение ширины отсутствует, пытается извлечь числовое значение из поля описания ('Description'), используя регулярное выражение для поиска чисел.
-        3. Проверяет, находится ли извлеченное значение ширины в допустимом диапазоне (0 < value <= env['max_width']).
+        3. Проверяет, находится ли извлеченное значение ширины в допустимом диапазоне (0 < value <= _env['max_width']).
         4. Если значение не соответствует допустимому диапазону, генерирует предупреждающее сообщение и создает задачу для отправки уведомления в Telegram.
         5. Возвращает извлеченное значение ширины или None, если значение не удалось извлечь или оно некорректно.
     """
     _env: Dict[str: int | str] = Config().get_config(ConfigNames.DATAS)
-    value: Union[float, None] = None
+    value: Optional[float] = None
     key_width: str = 'Packing.Ширина'
     key_description: str = 'Description'
     
@@ -293,15 +295,20 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Union[float, None]:
 
     if value is not None:
         if not 0 < value <= _env['datas_max_width']:
-            message = f'For product "{row["Packing.Barcode"]}", the width value "{value}" was outside the acceptable range. '
-            message += f'Source: "{row["Source_File"]}".'
-            logging.warning(message)
-            tasks.append(aio_create_task(TelegramMessenger().add_message(message)))
+            message = (
+                f'*For product:*```\n{row['Packing.Barcode']} ```the width value "`{value}`" was outside the '
+                f'acceptable range.\n\n*Source:* ```{row['Source_File']}```'
+            )
+            logging.warning(
+                message.replace('\n', ' ').replace('*', '').replace('`', ''))
+            tasks.append(aio_create_task(TelegramMessenger().add_message(f'️🟥 {message}')))
+            
+            return None
 
     return value
 
 
-def extract_compound(row: Series) -> Union[str, None]:
+def extract_compound(row: Series) -> Optional[str]:
     """
     Функция для извлечения информации о составе упаковки из столбца 'Packing.Состав' или 'AdditionalDescription'.
 
@@ -309,7 +316,7 @@ def extract_compound(row: Series) -> Union[str, None]:
     :ptype row: Series
 
     :return: Извлеченное значение состава или None, если значение не удалось извлечь или оно некорректно.
-    :rtype: Union[str, None]
+    :rtype: Optional[str]
 
     Функция выполняет следующие действия:
         1. Проверяет, является ли значение в столбце 'Packing.Состав' строкой и не пусто ли оно.
@@ -318,7 +325,7 @@ def extract_compound(row: Series) -> Union[str, None]:
         4. Если условие из пункта 3 выполняется, возвращает значение из 'AdditionalDescription'.
         5. Если ни одно из условий не выполняется, возвращает None.
     """
-    value: Union[str, None] = None
+    value: Optional[str] = None
     key_compound: str = 'Packing.Состав'
     key_description: str = 'AdditionalDescription'
     
@@ -327,7 +334,7 @@ def extract_compound(row: Series) -> Union[str, None]:
     elif isinstance(row[key_description], str) and row[key_description]:
         value = row[key_description] if row[key_description] else None
 
-    return value
+    return value.upper() if value else None
 
 
 async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
@@ -431,17 +438,17 @@ async def save_dataframe_to_csv(df: 'DataFrame', output_path: str, sep: str) -> 
     df.to_csv(output_path, index=False, sep=sep)
 
 
-async def find_matching_files(directory: str, pattern: str) -> dict:
+async def find_matching_files(directory: str, pattern: str) -> Dict[str, str]:
     """
     Асинхронная функция для поиска файлов в указанной директории, соответствующих заданному шаблону.
 
     :param directory: Директория, в которой необходимо искать файлы.
-    :type directory: str
+    :ptype directory: str
     :param pattern: Шаблон, по которому производится поиск файлов.
-    :type pattern: str
+    :ptype pattern: str
 
     :return: Словарь, где ключи — это имена файлов, соответствующих шаблону, а значения — их полные пути.
-    :rtype: dict
+    :rtype: Dict[str, str]
 
     Функция выполняет следующие действия:
         1. Обходит все файлы в указанной директории и поддиректориях.
@@ -503,7 +510,7 @@ async def copy_file(src: str, dst: str) -> None:
         logging.error(f'Failed to copy file from "{src}" to "{dst}": {e}.')
 
 
-async def process_and_save_all_csv(header_template_path: str) -> None:
+async def process_and_save_all_csv(header_template_path: str) -> Dict[str, str]:
     """
     Асинхронная функция для обработки и сохранения CSV файлов. Она выполняет поиск файлов, соответствующих
     заданному шаблону, объединяет их, сортирует столбцы в соответствии с заданным шаблоном заголовков и
@@ -529,16 +536,18 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
         7. Логирует предупреждения в случае отсутствия данных для сохранения или если не удалось найти файлы по шаблону.
         8. Логирует предупреждения в случае отсутствия ожидаемого столбца в данных.
 
-    :return: None
+    :return: Словарь, где ключ — название файла, значение — путь к файлу.
+    :rtype: Dict[str, str]
     """
     _env: Dict[str: int | str] = Config().get_config(ConfigNames.CSV)
     header_template = await load_header_template(header_template_path)
     
-    files_dict = await find_matching_files(_env['csv_path_directory'], _env['csv_file_pattern'])
+    files_dict: Dict[str, str] = await find_matching_files(_env['csv_path_directory'], _env['csv_file_pattern'])
     logging.info(f'Found {len(files_dict)} files matching the pattern.')
     
     if files_dict:
         merged_df = await merge_csv_files(files_dict=files_dict)
+        await TelegramMessenger().flush()
         
         if merged_df is not None:
             for file_name, file_path in files_dict.items():
@@ -573,15 +582,20 @@ async def process_and_save_all_csv(header_template_path: str) -> None:
     else:
         logging.warning('No files found matching the pattern.')
 
+    return files_dict
+
 
 async def run_merge() -> None:
     logging.info('Run Script!')
     _env: Dict[str: int | str] = Config().get_config(ConfigNames.CSV)
     path = str(os_join(_env['csv_path_template_directory'], _env['csv_file_name_for_dta']))
-    await process_and_save_all_csv(path)
-    # await send_telegram_message('CSV files merged completed successfully.')
-    await TelegramMessenger().add_message('CSV files merged completed successfully.')
-    await TelegramMessenger().flush()
+    bot = TelegramMessenger()
+
+    files_dict = await process_and_save_all_csv(path)
+    files_list_str = '\n'.join([f'{key}: {value}' for key, value in files_dict.items()])
+    await bot(action=MessageState.SEND)
+    message = f'*CSV files merged completed successfully.*\n\nFiles:```\n{files_list_str}```'
+    await bot(message=message, action=MessageState.SEND)
     logging.info('Finished Script!')
 
 

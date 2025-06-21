@@ -68,7 +68,7 @@ class Config:
         current_date = self._current_date
         try:
             return {
-                'CSV_SEPARATOR': getenv('CSV_SEPARATOR'),
+                'CSV_SEPARATOR': getenv('CSV_SEPARATOR', ';'),
                 'CSV_PATH_TEMPLATE_DIRECTORY': getenv('CSV_PATH_TEMPLATE_DIRECTORY'),
                 'CSV_PATH_DIRECTORY': getenv('CSV_PATH_DIRECTORY'),
                 'CSV_FILE_PATTERN': getenv('CSV_FILE_PATTERN'),
@@ -84,6 +84,9 @@ class Config:
                 
                 'TELEGRAM_TOKEN': getenv('TELEGRAM_TOKEN'),
                 'TELEGRAM_CHAT_ID': getenv('TELEGRAM_CHAT_ID'),
+                'TELEGRAM_MAX_MSG_LENGTH': int(getenv('TELEGRAM_MAX_MSG_LENGTH', 4096)),
+                'TELEGRAM_LINE_HEIGHT': int(getenv('TELEGRAM_LINE_HEIGHT', 25)),
+                'TELEGRAM_PARSE_MODE': getenv('TELEGRAM_PARSE_MODE', None),
 
                 'MSG_LANGUAGE': getenv('MSG_LANGUAGE', 'en').lower(),
 
