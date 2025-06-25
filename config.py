@@ -25,10 +25,10 @@ class ConfigNames(Enum):
     LOG = 'log'
 
     def __str__(self):
-        return f"ConfigNames.{self.name} = {self.value}"
+        return f'ConfigNames.{self.name} = {self.value}'
     
     def __repr__(self):
-        return f"<ConfigNames.{self.name} (value={self.value})>"
+        return f'<ConfigNames.{self.name} (value={self.value})>'
 
 
 class Config:
