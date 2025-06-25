@@ -5,24 +5,20 @@
 # __deprecated__ = False
 __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.8.0.0'
+# __version__ = '1.9.0.0'
 
 import logging
 from os import getlogin
 from sys import platform
 from subprocess import check_call, run as sub_run, CalledProcessError
 from pathlib import Path
+from typing import Dict, Any
 from venv import create as venv_create
 
-# Константы
-MAIN_SCRIPT = 'merge_csv'
-REQUIREMENTS_FILE = 'requirements.txt'
-VENV_INDIVIDUAL = False if getlogin().lower() == __maintainer__.lower() else True
-VENV_PATH = '.venv'
-GIT_PULL_ENABLED = False if getlogin().lower() == __maintainer__.lower() else True
-LOG_FORMAT = '%(filename)s:%(lineno)-10d\n%(asctime)-20s| %(levelname)-8s| %(name)-10s| %(funcName)-27s| %(message)s'
-LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
-LOG_LANGUAGE = 'en'  # en / ru
+from config import Config, ConfigNames
+
+
+
 LOG_MESSAGE = {
     'venv_create': {
         'en': 'Creating a virtual environment in directory "{path}"...',
@@ -90,84 +86,97 @@ LOG_MESSAGE = {
     },
 }
 
-# Настройка логирования
-logging.basicConfig(level=logging.INFO, format=LOG_FORMAT, datefmt=LOG_DATE_FORMAT)
 
 class VirtualEnvironmentManager:
-    def __init__(self, venv_path: str, individual: bool = True, git_pull_enabled: bool = True) -> None:
-        base_path = Path(venv_path)
+    def __init__(self) -> None:
+        config: Dict[str: Any] = Config().get_config(ConfigNames.RUN)
+
+        individual: bool = False if getlogin().lower() == __maintainer__.lower() else config.get(
+            'VENV_INDIVIDUAL', True)
+        git_pull_enabled: bool = False if getlogin().lower() == __maintainer__.lower() else config.get(
+            'GIT_PULL_ENABLED', True)
+        
+        self._log_language = config.get('LOG_LANGUAGE', 'en')
+        self._main_script = config.get('MAIN_SCRIPT')
+        self._requirements_file = config.get('REQUIREMENTS_FILE', 'requirements.txt')
+
+        venv_path: Path = Path(config.get('VENV_PATH', '.venv'))
         if individual:
-            self.venv_dir = base_path.with_name(f'{base_path.name}_{getlogin()}')
+            self.venv_dir = venv_path.with_name(f'{venv_path.name}_{getlogin()}')
         else:
-            self.venv_dir = base_path
+            self.venv_dir = venv_path
         self.git_pull_enabled = git_pull_enabled
 
     def create_virtual_environment(self) -> None:
         """Создает виртуальное окружение в указанной директории."""
+        lng = self._log_language
         if not self.venv_dir.exists():
-            logging.info(LOG_MESSAGE['venv_create'][LOG_LANGUAGE].format(path=str(self.venv_dir)))
+            logging.info(LOG_MESSAGE['venv_create'][lng].format(path=str(self.venv_dir)))
             venv_create(str(self.venv_dir), with_pip=True)
         else:
-            logging.warning(LOG_MESSAGE['venv_exists'][LOG_LANGUAGE].format(path=str(self.venv_dir)))
+            logging.warning(LOG_MESSAGE['venv_exists'][lng].format(path=str(self.venv_dir)))
     
     def install_dependencies(self) -> None:
         """Устанавливает зависимости из файла requirements.txt."""
+        lng = self._log_language
         pip_executable = Path(
-            self.venv_dir, 'Scripts', 'pip') if platform == 'win32' else Path(self.venv_path, 'bin', 'pip')
-        logging.info(LOG_MESSAGE['requirements'][LOG_LANGUAGE])
+            self.venv_dir, 'Scripts', 'pip') if platform == 'win32' else Path(self.venv_dir, 'bin', 'pip')
+        logging.info(LOG_MESSAGE['requirements'][lng])
         try:
             result = sub_run(
-                [str(pip_executable), 'install', '-r', REQUIREMENTS_FILE],
+                [str(pip_executable), 'install', '-r', self._requirements_file],
                 capture_output=True, text=True, check=True)
             output = result.stdout.strip()  # результат выполнения команды
  
-            logging.debug(LOG_MESSAGE['command_output_result'][LOG_LANGUAGE].format(output=f'\n{output}'))
+            logging.debug(LOG_MESSAGE['command_output_result'][lng].format(output=f'\n{output}'))
         except CalledProcessError as e:
-            logging.error(LOG_MESSAGE['file_not_found'][LOG_LANGUAGE].format(file=str(pip_executable), error=e))
+            logging.error(LOG_MESSAGE['file_not_found'][lng].format(file=str(pip_executable), error=e))
     
     def run_main_script(self) -> None:
         """Запускает основной скрипт проекта в виртуальном окружении."""
+        lng = self._log_language
         python_executable = Path(
-            self.venv_dir, 'Scripts', 'python') if platform == 'win32' else Path(self.venv_path, 'bin', 'python')
+            self.venv_dir, 'Scripts', 'python') if platform == 'win32' else Path(self.venv_dir, 'bin', 'python')
         try:
             result_install = sub_run([str(python_executable), '-m', 'pip', 'install', '--upgrade', 'pip'],
                 capture_output=True, text=True, check=True)
             output_install = result_install.stdout.strip()
-            logging.debug(LOG_MESSAGE['command_output_result'][LOG_LANGUAGE].format(output=f' {output_install}'))
+            logging.debug(LOG_MESSAGE['command_output_result'][lng].format(output=f' {output_install}'))
 
-            logging.info(LOG_MESSAGE['run_script'][LOG_LANGUAGE].format(file=MAIN_SCRIPT))
-            check_call([str(python_executable), f'{MAIN_SCRIPT}.py'])
+            logging.info(LOG_MESSAGE['run_script'][lng].format(file=self._main_script))
+            check_call([str(python_executable), f'{self._main_script}.py'])
         except KeyboardInterrupt:
-            logging.error(LOG_MESSAGE['task_cancelled'][LOG_LANGUAGE])
+            logging.error(LOG_MESSAGE['task_cancelled'][lng])
         except CalledProcessError as e:
-            logging.error(LOG_MESSAGE['file_not_found'][LOG_LANGUAGE].format(file=str(python_executable), error=e))
+            logging.error(LOG_MESSAGE['file_not_found'][lng].format(file=str(python_executable), error=e))
         except Exception as e:
-            logging.error(LOG_MESSAGE['unknown_error'][LOG_LANGUAGE].format(error=e))
+            logging.error(LOG_MESSAGE['unknown_error'][lng].format(error=e))
 
-    @staticmethod
-    def git_pull() -> None:
+    def git_pull(self) -> None:
         """Выполняет git pull для обновления репозитория."""
-        logging.info(LOG_MESSAGE['git_pull_begin'][LOG_LANGUAGE])
+        lng = self._log_language
+        logging.info(LOG_MESSAGE['git_pull_begin'][lng])
         try:
             result = sub_run(['git', 'pull'], capture_output=True, text=True, check=True)
             output = result.stdout.strip()
-            logging.info(LOG_MESSAGE['git_pull_success'][LOG_LANGUAGE])
-            logging.info(LOG_MESSAGE['command_output_result'][LOG_LANGUAGE].format(output=f'\n{output}'))
+            logging.info(LOG_MESSAGE['git_pull_success'][lng])
+            logging.info(LOG_MESSAGE['command_output_result'][lng].format(output=f'\n{output}'))
         except FileNotFoundError:
-            logging.error(LOG_MESSAGE['git_pull_not_found'][LOG_LANGUAGE])
+            logging.error(LOG_MESSAGE['git_pull_not_found'][lng])
         except CalledProcessError as e:
-            logging.error(LOG_MESSAGE['git_pull_failed'][LOG_LANGUAGE].format(error=e.stderr))
+            logging.error(LOG_MESSAGE['git_pull_failed'][lng].format(error=e.stderr))
         except Exception as e:
-            logging.error(LOG_MESSAGE['git_pull_unexpected'][LOG_LANGUAGE].format(error=e))
+            logging.error(LOG_MESSAGE['git_pull_unexpected'][lng].format(error=e))
 
     def setup(self) -> None:
         """
         Выполняет обновление репозитория (git pull), затем запускает процесс создания виртуального окружения,
         установки зависимостей и запуска основного скрипта проекта. Все этапы пишутся в логи.
         """
+        lng = self._log_language
         if self.git_pull_enabled:
-            logging.info(LOG_MESSAGE['git_pull_start'][LOG_LANGUAGE])
-            logging.info(LOG_MESSAGE['git_pull_begin'][LOG_LANGUAGE])
+            logging.info(LOG_MESSAGE['git_pull_start'][lng])
+            logging.info(LOG_MESSAGE['git_pull_begin'][lng])
             self.git_pull()
         self.create_virtual_environment()
         # Проверка существования каталога venv
@@ -177,9 +186,10 @@ class VirtualEnvironmentManager:
             self.run_main_script()
         else:
             logging.error(
-                LOG_MESSAGE['file_not_found'][LOG_LANGUAGE].format(file=str(self.venv_dir), error='Directory not found'))
+                LOG_MESSAGE['file_not_found'][lng].format(
+                    file=str(self.venv_dir), error='Directory not found.'))
 
 
-if __name__ == "__main__":
-    manager = VirtualEnvironmentManager(VENV_PATH, VENV_INDIVIDUAL, git_pull_enabled=GIT_PULL_ENABLED)
+if __name__ == '__main__':
+    manager = VirtualEnvironmentManager()
     manager.setup()

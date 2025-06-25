@@ -183,7 +183,7 @@ class TelegramMessenger:
 # from aiohttp import ClientSession as aio_ClientSession, ClientTimeout as aio_ClientTimeout
 # from asyncio import sleep as aio_sleep, Lock as aio_Lock, TimeoutError as aio_TimeoutError
 #
-# from config import Config, ConfigNames
+# from cfg import Config, ConfigNames
 # from logger import logging
 #
 #
