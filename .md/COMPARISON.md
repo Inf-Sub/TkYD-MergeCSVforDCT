@@ -105,7 +105,7 @@ class ColorExtractor(DataExtractor):
 ### Автоматическая миграция
 ```bash
 # run.py теперь запускает новую архитектуру
-python run.py  # Запускает merge_csv_oop.py
+python run.py  # Запускает merge_csv.py
 ```
 
 ### Обратная совместимость

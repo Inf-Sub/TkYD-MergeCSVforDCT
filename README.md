@@ -40,14 +40,14 @@ cp example_config.ini config.ini
 
 ```ini
 [TELEGRAM]
-telegram_token = YOUR_BOT_TOKEN
-telegram_chat_id = YOUR_CHAT_ID
 PARSE_MODE = MarkdownV2
 
-[CSV]
+[CSV]SEPARATOR = ;
+PATH_TEMPLATE_DIRECTORY = C:\Your\Template\CSV\Directory\
 PATH_DIRECTORY = C:\Your\CSV\Directory\
 FILE_PATTERN = ^(MSK-[A-Za-z0-9]+)-Nomenclature\.csv$
 ```
+
 
 ### 3. Настройка переменных окружения (опционально)
 
@@ -55,6 +55,14 @@ FILE_PATTERN = ^(MSK-[A-Za-z0-9]+)-Nomenclature\.csv$
 
 ```bash
 cp example.env .env
+```
+
+Отредактируйте `.env`:
+
+```.env
+# Telegram
+TELEGRAM_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=telegram_chat_id
 ```
 
 ## 🚀 Запуск
@@ -87,7 +95,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Запуск
-python merge_csv_oop.py
+python merge_csv.py
 ```
 
 ## ⚙️ Конфигурация
@@ -105,10 +113,9 @@ python merge_csv_oop.py
 - `SEPARATOR` - разделитель в CSV файлах
 
 #### [TELEGRAM]
-- `telegram_token` - токен бота Telegram
-- `telegram_chat_id` - ID чата для уведомлений
 - `PARSE_MODE` - режим форматирования (Markdown/MarkdownV2/HTML)
 - `MAX_MSG_LENGTH` - максимальная длина сообщения
+- `LINE_HEIGHT` - максимальная ширина сообщения (обычно 24-26 символов для мобильных устройств)
 
 #### [DATAS]
 - `MAX_WIDTH` - максимальная ширина товара
@@ -136,7 +143,7 @@ TELEGRAM_CHAT_ID=your_chat_id
 
 ### Уведомления в Telegram
 
-- **Успешное завершение** с списком обработанных файлов
+- **Успешное завершение** со списком обработанных файлов
 - **Предупреждения** о некорректных данных
 - **Ошибки** с детальным описанием
 - **Мониторинг** времени последнего изменения файлов
@@ -153,7 +160,7 @@ TELEGRAM_CHAT_ID=your_chat_id
 ```
 TkYD-MergeCSVforDCT/
 ├── run.py                 # Главный скрипт запуска
-├── merge_csv_oop.py       # Основной скрипт обработки
+├── merge_csv.py           # Основной скрипт обработки
 ├── csv_processor.py       # Обработчик CSV файлов
 ├── data_extractors.py     # Извлечение и валидация данных
 ├── file_manager.py        # Управление файлами

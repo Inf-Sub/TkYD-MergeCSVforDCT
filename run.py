@@ -1,11 +1,11 @@
 # __author__ = 'InfSub'
 # __contact__ = 'https:/t.me/InfSub'
 # __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/26'
+# __date__ = '2025/06/27'
 # __deprecated__ = False
 __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '2.0.0.0'
+# __version__ = '2.0.0.1'
 
 import logging
 from logging import getLogger
@@ -13,7 +13,6 @@ from os import getlogin
 from sys import platform
 from subprocess import check_call, run as sub_run, CalledProcessError
 from pathlib import Path
-from typing import Dict, Any
 from venv import create as venv_create
 from configparser import ConfigParser
 
@@ -67,7 +66,6 @@ class VirtualEnvironmentManager:
     """Менеджер виртуального окружения и запуска проекта"""
     
     def __init__(self) -> None:
-        # Не создаём Config() здесь, чтобы не логировать до настройки логирования
         self._config = None
         self._log_language = 'en'  # значение по умолчанию
         self._main_script = 'merge_csv_oop'  # значение по умолчанию
