@@ -84,14 +84,38 @@ class MessageFormatter:
     @staticmethod
     def _format_markdown_v2(text: str) -> str:
         """Форматирование для MarkdownV2"""
-        # В режиме MarkdownV2 оставляем Markdown-синтаксис как есть
-        # Не заменяем ` на <code>, так как это HTML-теги
-        # MarkdownV2 поддерживает `код` и ```блок кода``` нативно
+        # Сначала защищаем Markdown-синтаксис, заменяя его на временные маркеры
+        placeholders = {}
         
-        # Экранируем специальные символы для MarkdownV2
+        # Защищаем ```блоки кода```
+        code_blocks = re.findall(r'```(.*?)```', text, flags=re.DOTALL)
+        for i, block in enumerate(code_blocks):
+            placeholder = f'__CODE_BLOCK_{i}__'
+            placeholders[placeholder] = f'```{block}```'
+            text = text.replace(f'```{block}```', placeholder)
+        
+        # Защищаем `код`
+        inline_codes = re.findall(r'`([^`]+)`', text)
+        for i, code in enumerate(inline_codes):
+            placeholder = f'__INLINE_CODE_{i}__'
+            placeholders[placeholder] = f'`{code}`'
+            text = text.replace(f'`{code}`', placeholder)
+        
+        # Защищаем *жирный текст*
+        bold_texts = re.findall(r'\*([^*]+)\*', text)
+        for i, bold in enumerate(bold_texts):
+            placeholder = f'__BOLD_{i}__'
+            placeholders[placeholder] = f'*{bold}*'
+            text = text.replace(f'*{bold}*', placeholder)
+        
+        # Экранируем специальные символы в обычном тексте
         special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
         for char in special_chars:
             text = text.replace(char, f'\\{char}')
+        
+        # Восстанавливаем Markdown-синтаксис
+        for placeholder, original in placeholders.items():
+            text = text.replace(placeholder, original)
         
         return text
     
