@@ -191,6 +191,7 @@ class Config:
             'RUN_VENV_INDIVIDUAL': ini_run.get(
                 'VENV_INDIVIDUAL', getenv('RUN_VENV_INDIVIDUAL', 'True')).lower() in ('true', '1'),
             'RUN_GIT_PULL_ENABLED': ini_run.get('GIT_PULL_ENABLED', getenv('RUN_GIT_PULL_ENABLED', 'True')).lower() in ('true', '1'),
+            'RUN_LOG_OUTPUT_ENABLED': ini_run.get('LOG_OUTPUT_ENABLED', getenv('RUN_LOG_OUTPUT_ENABLED', 'True')).lower() in ('true', '1'),
         }
 
     def get_config(self, *config_types: str | ConfigNames) -> Dict[str, Any]:

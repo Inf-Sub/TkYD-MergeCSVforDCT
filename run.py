@@ -74,6 +74,7 @@ class VirtualEnvironmentManager:
         self._requirements_file = 'requirements.txt'  # значение по умолчанию
         self.venv_dir = Path('.venv')  # значение по умолчанию
         self.git_pull_enabled = True  # значение по умолчанию
+        self.log_output_enabled = True  # значение по умолчанию
         
         # Определяем пути к исполняемым файлам
         self._bin_dir = 'Scripts' if platform == 'win32' else 'bin'
@@ -94,6 +95,7 @@ class VirtualEnvironmentManager:
             self._log_language = self._config.get('msg_language', 'en')
             self._main_script = self._config.get('run_main_script', 'merge_csv_oop')
             self._requirements_file = self._config.get('run_requirements_file', 'requirements.txt')
+            self.log_output_enabled = self._config.get('run_log_output_enabled', True)
             
             # Настройка пути к виртуальному окружению
             venv_path = Path(self._config.get('run_venv_path', '.venv'))
@@ -128,7 +130,8 @@ class VirtualEnvironmentManager:
                 [str(self.pip_executable), 'install', '-r', self._requirements_file],
                 capture_output=True, text=True, check=True
             )
-            self._log('pip_output', output=f'\n{result.stdout.strip()}')
+            if self.log_output_enabled:
+                self._log('pip_output', output=f'\n{result.stdout.strip()}')
         except CalledProcessError as e:
             raise RuntimeError(f"Failed to install dependencies: {e.stderr}")
     
@@ -159,7 +162,8 @@ class VirtualEnvironmentManager:
         try:
             result = sub_run(['git', 'pull'], capture_output=True, text=True, check=True)
             self._log('git_pull_success')
-            logging.debug(f"Git output: {result.stdout.strip()}")
+            if self.log_output_enabled:
+                logging.debug(f"Git output: {result.stdout.strip()}")
         except FileNotFoundError:
             self._log('git_pull_not_found')
         except CalledProcessError as e:
