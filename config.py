@@ -5,7 +5,7 @@
 # __deprecated__ = False
 # __maintainer__ = 'InfSub'
 # __status__ = 'Development'  # 'Production / Development'
-# __version__ = '1.9.0.1'
+# __version__ = '2.0.0.0'
 
 from enum import Enum
 from os import getenv
@@ -78,7 +78,8 @@ class Config:
         # Проверяем, инициализирован ли уже экземпляр
         if not hasattr(self, '_initialized'):
             self._initialized = True  # Устанавливаем флаг инициализации
-            logging.info('Загрузка переменных окружения из файла .env и config.ini')
+            # Убираем логирование отсюда, чтобы не логировать до настройки логирования
+            # logging.info('Загрузка переменных окружения из файла .env и config.ini')
             load_dotenv()
             self._current_date = dt.now()
             self._config_ini = self._load_ini()
@@ -190,6 +191,7 @@ class Config:
             'RUN_VENV_INDIVIDUAL': ini_run.get(
                 'VENV_INDIVIDUAL', getenv('RUN_VENV_INDIVIDUAL', 'True')).lower() in ('true', '1'),
             'RUN_GIT_PULL_ENABLED': ini_run.get('GIT_PULL_ENABLED', getenv('RUN_GIT_PULL_ENABLED', 'True')).lower() in ('true', '1'),
+            'RUN_LOG_OUTPUT_ENABLED': ini_run.get('LOG_OUTPUT_ENABLED', getenv('RUN_LOG_OUTPUT_ENABLED', 'True')).lower() in ('true', '1'),
         }
 
     def get_config(self, *config_types: str | ConfigNames) -> Dict[str, Any]:
