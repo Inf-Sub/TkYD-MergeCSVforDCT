@@ -20,6 +20,7 @@ from csv_processor import CSVProcessor
 from column_enums import PackingColumns, DescriptionColumns, StorageColumns, AggregationColumns, ColumnGroups
 from data_extractors import WidthExtractor, CompoundExtractor
 from file_manager import FileManager
+from send_msg_optimized import TelegramMessenger
 
 
 async def example_basic_usage():
@@ -94,7 +95,6 @@ def example_data_extraction():
     
     # Создание экстракторов
     from logger import logging
-    from send_msg import TelegramMessenger
     
     telegram_messenger = TelegramMessenger()
     logger = logging.getLogger(__name__)

@@ -14,7 +14,7 @@ from re import search
 from asyncio import Task as aio_Task, create_task as aio_create_task
 
 from column_enums import PackingColumns, DescriptionColumns, StorageColumns
-from send_msg import TelegramMessenger
+from send_msg_optimized import TelegramMessenger
 
 
 class DataExtractor:
@@ -53,8 +53,7 @@ class WidthExtractor(DataExtractor):
                 barcode_value = row[PackingColumns.BARCODE.value]
                 source_value = row[StorageColumns.SOURCE_FILE.value]
                 message = (
-                    f'*For product:*```\n{barcode_value} ```the width value "`{value}`" was outside the '
-                    f'acceptable range.\n\n*Source:* ```{source_value}```'
+                    f'*For product:* `{barcode_value}` the width value `{value}` was outside the acceptable range.'
                 )
                 self.logger.warning(message.replace('\n', ' ').replace('*', '').replace('`', ''))
                 tasks.append(aio_create_task(self.telegram_messenger.add_message(f'️🟥 {message}')))

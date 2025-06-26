@@ -17,7 +17,7 @@ from os.path import join as os_join
 
 from config import Config, ConfigNames
 from logger import logging
-from send_msg import TelegramMessenger, MessageState
+from send_msg_optimized import TelegramMessenger, MessageState
 from column_enums import PackingColumns, DescriptionColumns, StorageColumns, AggregationColumns, ColumnGroups
 from file_manager import FileManager
 from data_extractors import WidthExtractor, CompoundExtractor
@@ -232,9 +232,9 @@ class CSVProcessor:
         ))
         
         files_dict = await self.process_and_save_all_csv(path)
-        files_list_str = '\n'.join([f'{key}: {value}' for key, value in files_dict.items()])
+        files_list_str = '\n'.join([f'`{key}: {value}`' for key, value in files_dict.items()])
         
         await self.telegram_messenger.flush()
-        message = f'*CSV files merged completed successfully.*\n\nFiles:```\n{files_list_str}```'
+        message = f'*CSV files merged completed successfully.*\n\nFiles:\n' + files_list_str
         await self.telegram_messenger.add_message(message)
         self.logger.info('Finished Script!') 

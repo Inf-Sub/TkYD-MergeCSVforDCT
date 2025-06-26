@@ -76,22 +76,20 @@ class MessageFormatter:
     @staticmethod
     def _format_markdown(text: str) -> str:
         """Форматирование для Markdown"""
-        # Заменяем ``` на <pre><code> для лучшей совместимости
-        text = re.sub(r'```(.*?)```', r'<pre><code>\1</code></pre>', text, flags=re.DOTALL)
-        # Заменяем ` на <code>
-        text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
+        # В режиме Markdown оставляем Markdown-синтаксис как есть
+        # Не заменяем ` на <code>, так как это HTML-теги
+        # Markdown поддерживает `код` и ```блок кода``` нативно
         return text
     
     @staticmethod
     def _format_markdown_v2(text: str) -> str:
         """Форматирование для MarkdownV2"""
-        # Сначала заменяем ``` на <pre><code> (до экранирования)
-        text = re.sub(r'```(.*?)```', r'<pre><code>\1</code></pre>', text, flags=re.DOTALL)
-        # Заменяем ` на <code> (до экранирования)
-        text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
+        # В режиме MarkdownV2 оставляем Markdown-синтаксис как есть
+        # Не заменяем ` на <code>, так как это HTML-теги
+        # MarkdownV2 поддерживает `код` и ```блок кода``` нативно
         
-        # Теперь экранируем специальные символы, но не HTML теги
-        special_chars = ['_', '*', '[', ']', '(', ')', '~', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+        # Экранируем специальные символы для MarkdownV2
+        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
         for char in special_chars:
             text = text.replace(char, f'\\{char}')
         
