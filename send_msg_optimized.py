@@ -90,21 +90,21 @@ class MessageFormatter:
         # Защищаем ```блоки кода```
         code_blocks = re.findall(r'```(.*?)```', text, flags=re.DOTALL)
         for i, block in enumerate(code_blocks):
-            placeholder = f'__CODE_BLOCK_{i}__'
+            placeholder = f'CODEBLOCK{i}'
             placeholders[placeholder] = f'```{block}```'
             text = text.replace(f'```{block}```', placeholder)
         
         # Защищаем `код`
         inline_codes = re.findall(r'`([^`]+)`', text)
         for i, code in enumerate(inline_codes):
-            placeholder = f'__INLINE_CODE_{i}__'
+            placeholder = f'INLINECODE{i}'
             placeholders[placeholder] = f'`{code}`'
             text = text.replace(f'`{code}`', placeholder)
         
         # Защищаем *жирный текст*
         bold_texts = re.findall(r'\*([^*]+)\*', text)
         for i, bold in enumerate(bold_texts):
-            placeholder = f'__BOLD_{i}__'
+            placeholder = f'BOLD{i}'
             placeholders[placeholder] = f'*{bold}*'
             text = text.replace(f'*{bold}*', placeholder)
         
