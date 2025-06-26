@@ -2,11 +2,17 @@
 # __contact__ = 'ADmin@TkYD.ru'
 # __copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
 # __date__ = '2025/06/26'
-# __deprecated__ = False
+# __deprecated__ = True
 # __email__ = 'ADmin@TkYD.ru'
 # __maintainer__ = 'InfSub'
-# __status__ = 'Production'  # 'Production / Development'
+# __status__ = 'Legacy'  # 'Production / Development / Legacy'
 # __version__ = '1.7.5.0'
+
+"""
+LEGACY VERSION - УСТАРЕВШАЯ ВЕРСИЯ
+Этот файл сохранен для обратной совместимости.
+Рекомендуется использовать новую ООП архитектуру: merge_csv_oop.py
+"""
 
 from io import StringIO
 from asyncio import gather as aio_gather, run as aio_run, create_task as aio_create_task, Task as aio_Task
@@ -131,7 +137,7 @@ async def process_headers(header_line: str) -> List[str]:
     :rtype: List[str]
     """
     # await aio_sleep(0)  # Предполагается, что это асинхронная пауза для имитации работы
-    _env: Dict[str: str] = Config().get_config(ConfigNames.CSV)
+    _env: Dict[str, str] = Config().get_config(ConfigNames.CSV)
     headers = header_line.strip().split(_env.get('csv_separator', ';'))  # Разделяем строку заголовков
     return [header for header in headers if header.strip()]  # Возвращаем непустые заголовки
 
@@ -178,7 +184,7 @@ async def read_csv_async(file_path: str) -> Optional[DataFrame]:
         6. Объединяет очищенные строки данных.
         7. Создает DataFrame из очищенных данных, используя только непустые заголовки для чтения.
     """
-    _env: Dict[str: str] = Config().get_config(ConfigNames.CSV)
+    _env: Dict[str, str] = Config().get_config(ConfigNames.CSV)
     csv_sep = _env.get('csv_separator', ';')
     logging.info(f'Reading file: {file_path}')
     lines = await read_file_lines(file_path)
@@ -282,7 +288,7 @@ def extract_width(row: Series, tasks: List[aio_Task]) -> Optional[float]:
         4. Если значение не соответствует допустимому диапазону, генерирует предупреждающее сообщение и создает задачу для отправки уведомления в Telegram.
         5. Возвращает извлеченное значение ширины или None, если значение не удалось извлечь или оно некорректно.
     """
-    _env: Dict[str: int | str] = Config().get_config(ConfigNames.DATAS)
+    _env: Dict[str, int | str] = Config().get_config(ConfigNames.DATAS)
     value: Optional[float] = None
     key_width: str = 'Packing.Ширина'
     key_description: str = 'Description'
@@ -358,7 +364,7 @@ async def merge_csv_files(files_dict: Dict[str, str]) -> Optional[DataFrame]:
     :return: Возвращает объединенный и обработанный DataFrame или None, если не удалось объединить данные.
     :rtype: Optional[DataFrame]
     """
-    _env: Dict[str: int | str] = Config().get_config(ConfigNames.DATAS)
+    _env: Dict[str, int | str] = Config().get_config(ConfigNames.DATAS)
     dataframes = await aio_gather(*[read_csv_async(file_path) for file_path in files_dict.values()])
     dataframes = [df for df in dataframes if df is not None]
 
@@ -478,7 +484,7 @@ def get_valid_file_name() -> Optional[str]:
     :return: Имя файла в виде строки или None, если ни одна из переменных окружения не содержит имени файла.
     :rtype: Optional[str]
     """
-    env: Dict[str: int | str] = Config().get_config(ConfigNames.CSV)
+    env: Dict[str, int | str] = Config().get_config(ConfigNames.CSV)
     csv_file_name = env.get('csv_file_name', '')
     csv_file_name_for_dta = env.get('csv_file_name_for_dta', '')
 
@@ -539,7 +545,7 @@ async def process_and_save_all_csv(header_template_path: str) -> Dict[str, str]:
     :return: Словарь, где ключ — название файла, значение — путь к файлу.
     :rtype: Dict[str, str]
     """
-    _env: Dict[str: int | str] = Config().get_config(ConfigNames.CSV)
+    _env: Dict[str, int | str] = Config().get_config(ConfigNames.CSV)
     header_template = await load_header_template(header_template_path)
     
     files_dict: Dict[str, str] = await find_matching_files(_env['csv_path_directory'], _env['csv_file_pattern'])
@@ -587,7 +593,7 @@ async def process_and_save_all_csv(header_template_path: str) -> Dict[str, str]:
 
 async def run_merge() -> None:
     logging.info('Run Script!')
-    _env: Dict[str: int | str] = Config().get_config(ConfigNames.CSV)
+    _env: Dict[str, int | str] = Config().get_config(ConfigNames.CSV)
     path = str(os_join(_env['csv_path_template_directory'], _env['csv_file_name_for_dta']))
     bot = TelegramMessenger()
 
@@ -600,4 +606,4 @@ async def run_merge() -> None:
 
 
 if __name__ == '__main__':
-    aio_run(run_merge())
+    aio_run(run_merge()) 

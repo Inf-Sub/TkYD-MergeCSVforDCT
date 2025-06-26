@@ -8,6 +8,7 @@ __maintainer__ = 'InfSub'
 # __version__ = '1.9.0.2'
 
 import logging
+from logging import StreamHandler, FileHandler, getLogger
 from os import getlogin
 from sys import platform
 from subprocess import check_call, run as sub_run, CalledProcessError
@@ -18,6 +19,8 @@ from configparser import ConfigParser
 
 from config import Config, ConfigNames
 
+# Константа для имени конфигурационного файла
+CONFIG_FILE = 'config.ini'
 
 # Дефолтные значения для логирования
 DEFAULT_LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-10s| %(funcName)-27s| %(message)s'
@@ -278,7 +281,7 @@ def setup_logging():
 
 if __name__ == '__main__':
     setup_logging()
-    logging = logging.getLogger(__name__)
+    logger = getLogger(__name__)
 
     manager = VirtualEnvironmentManager()
     manager.setup()
