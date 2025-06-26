@@ -26,18 +26,18 @@ def setup_logger(log_path: str | None = None) -> str | None:
 
     :return: None
     """
-    env: Dict[str: str] = Config().get_config(ConfigNames.LOG)
+    config: Dict[str, str] = Config().get_config(ConfigNames.LOG)
 
-    log_level_console: str = env.get('log_level_console')
-    log_level_file: str = env.get('log_level_file')
-    log_level_root: str = env.get('log_level_root', 'INFO')
-    log_format_console: str = env.get('log_format_console')
-    log_format_file: str = env.get('log_format_file')
-    log_date_format: str = env.get('log_date_format')
-    log_console_language: str = env.get('log_console_language')
-    log_dir: str = env.get('log_dir', r'logs\%Y\%Y.%m')
-    log_file: str = env.get('log_file', 'backup_log_%Y.%m.%d.log')
-    log_ignore_list: List[str] = env.get('log_ignore_list', [])
+    log_level_console: str = config.get('log_level_console')
+    log_level_file: str = config.get('log_level_file')
+    log_level_root: str = config.get('log_level_root', 'INFO')
+    log_format_console: str = config.get('log_format_console')
+    log_format_file: str = config.get('log_format_file')
+    log_date_format: str = config.get('log_date_format')
+    log_console_language: str = config.get('log_console_language')
+    log_dir: str = config.get('log_dir', r'logs\%Y\%Y.%m')
+    log_file: str = config.get('log_file', 'backup_log_%Y.%m.%d.log')
+    log_ignore_list: List[str] = config.get('log_ignore_list', [])
 
     if log_path is None:
         log_path = os_join(log_dir, log_file)

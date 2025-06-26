@@ -173,3 +173,4 @@ run_*.py
 *_v*.py
 test_*.py
 .test/
+config.ini

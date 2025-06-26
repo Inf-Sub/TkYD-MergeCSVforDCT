@@ -1,7 +1,7 @@
 # __author__ = 'InfSub'
 # __contact__ = 'https:/t.me/InfSub'
 # __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/19'
+# __date__ = '2025/06/26'
 # __deprecated__ = False
 # __maintainer__ = 'InfSub'
 # __status__ = 'Development'  # 'Production / Development'
@@ -14,14 +14,7 @@ from datetime import datetime as dt
 import logging
 from configparser import ConfigParser
 from pathlib import Path
-
-# Безопасный импорт dotenv
-try:
-    from dotenv import load_dotenv
-    DOTENV_AVAILABLE = True
-except ImportError:
-    DOTENV_AVAILABLE = False
-    logging.warning('python-dotenv not installed. Environment variables will be loaded from system only.')
+from dotenv import load_dotenv
 
 
 class ConfigNames(Enum):
@@ -31,6 +24,7 @@ class ConfigNames(Enum):
     Каждое значение соответствует секции в config.ini файле.
     Используется для типизированного доступа к конфигурационным параметрам.
     """
+    # CONFIG_FILE = 'config.ini'
     CSV = 'csv'
     DATAS = 'datas'
     INACTIVITY = 'inactivity'
@@ -85,8 +79,7 @@ class Config:
         if not hasattr(self, '_initialized'):
             self._initialized = True  # Устанавливаем флаг инициализации
             logging.info('Загрузка переменных окружения из файла .env и config.ini')
-            if DOTENV_AVAILABLE:
-                load_dotenv()
+            load_dotenv()
             self._current_date = dt.now()
             self._config_ini = self._load_ini()
             self._env = self._load_env()
@@ -187,7 +180,7 @@ class Config:
             'LOG_FORMAT_CONSOLE': substitute_logformat(ini_log.get('FORMAT_CONSOLE', getenv('LOG_FORMAT_CONSOLE', ''))),
             'LOG_FORMAT_FILE': substitute_logformat(ini_log.get('FORMAT_FILE', getenv('LOG_FORMAT_FILE', ''))),
             'LOG_DATE_FORMAT': ini_log.get('DATE_FORMAT', getenv('LOG_DATE_FORMAT', '%Y.%m.%d %H:%M:%S')),
-            'LOG_CONSOLE_LANGUAGE': ini_log.get('CONSOLE_LANGUAGE', getenv('MSG_LANGUAGE', 'en')).lower(),
+            'LOG_CONSOLE_LANGUAGE': ini_log.get('CONSOLE_LANGUAGE', getenv('LOG_CONSOLE_LANGUAGE', 'en')).lower(),
             
             # RUN
             'RUN_MAIN_SCRIPT': ini_run.get('MAIN_SCRIPT', getenv('RUN_MAIN_SCRIPT', 'merge_csv')),

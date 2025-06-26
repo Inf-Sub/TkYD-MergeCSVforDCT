@@ -1,12 +1,12 @@
 # __author__ = 'InfSub'
 # __contact__ = 'ADmin@TkYD.ru'
 # __copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/19'
+# __date__ = '2025/06/26'
 # __deprecated__ = False
 # __email__ = 'ADmin@TkYD.ru'
 # __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.7.4.2'
+# __version__ = '1.7.5.0'
 
 from io import StringIO
 from asyncio import gather as aio_gather, run as aio_run, create_task as aio_create_task, Task as aio_Task
@@ -45,7 +45,7 @@ async def check_file_modification(file_path: str) -> None:
 
     :return: None
     """
-    _env: Dict[str: str] = Config().get_config(ConfigNames.INACTIVITY)
+    config: Dict[str, int] = Config().get_config(ConfigNames.INACTIVITY)
     # Получаем время последней модификации файла
     file_mod_time: datetime = datetime.fromtimestamp(getmtime(file_path))
     current_time: datetime = datetime.now()
@@ -69,11 +69,11 @@ async def check_file_modification(file_path: str) -> None:
     message: str = f'*The file was modified at:*\n{file_mod_date}\n{time_description} ago.'
     
     # Проверяем разницу во времени
-    if file_mod_delta <= timedelta(hours=_env['inactivity_limit_hours']):
+    if file_mod_delta <= timedelta(hours=config['inactivity_limit_hours']):
         logging.info(message.replace('\n', ' ').replace('*', '').replace('`', ''))
     else:
         message = (
-            f'*File:*```\n{file_path} ```has not been modified for more than *{_env["inactivity_limit_hours"]}* '
+            f'*File:*```\n{file_path} ```has not been modified for more than *{config["inactivity_limit_hours"]}* '
             f'hours.\n\n{message}')
         logging.warning(message.replace('\n', ' ').replace('*', '').replace('`', ''))
         

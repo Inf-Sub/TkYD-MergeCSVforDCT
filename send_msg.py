@@ -1,12 +1,12 @@
 # __author__ = 'InfSub'
 # __contact__ = 'ADmin@TkYD.ru'
 # __copyright__ = 'Copyright (C) 2024, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/19'
+# __date__ = '2025/06/26'
 # __deprecated__ = False
 # __email__ = 'ADmin@TkYD.ru'
 # __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.7.4.3'
+# __version__ = '1.7.5.0'
 
 from typing import List, Optional, Dict, Literal, Tuple
 from aiohttp import ClientSession as aio_ClientSession, ClientTimeout as aio_ClientTimeout
@@ -32,23 +32,28 @@ class TelegramMessenger:
         return cls._instance
 
     def __init__(
-            self, telegram_token: Optional[str] = None, telegram_chat_id: Optional[str] = None,
-            max_message_length: Optional[int] = None, parse_mode: Optional[Literal['Markdown']] = None
+            self,
+            telegram_token: Optional[str] = None,
+            telegram_chat_id: Optional[str] = None,
+            max_message_length: Optional[int] = None,
+            parse_mode: Optional[Literal['Markdown', 'MarkdownV2', 'HTML']] = None
     ):
         # Инициализация, если еще не инициализирован
         if not hasattr(self, '_initialized'):
             self._initialized = True
     
-            _env: Dict[str: str] = Config().get_config(ConfigNames.TELEGRAM)
-            telegram_token = _env['telegram_token'] if telegram_token is None else telegram_token
-            telegram_chat_id = _env['telegram_chat_id'] if telegram_chat_id is None else telegram_chat_id
-            telegram_parse_mode = _env['telegram_parse_mode'] if parse_mode is None else parse_mode
-            telegram_line_height = _env['telegram_line_height']
-            max_message_length = _env['telegram_max_msg_length'] if max_message_length is None else max_message_length
+            config: Dict[str, int | str] = Config().get_config(ConfigNames.TELEGRAM)
+            telegram_token: str = config['telegram_token'] if telegram_token is None else telegram_token
+            telegram_chat_id: str = config['telegram_chat_id'] if telegram_chat_id is None else telegram_chat_id
+            telegram_parse_mode: Optional[Literal['Markdown', 'MarkdownV2', 'HTML']] = (
+                config['telegram_parse_mode'] if parse_mode is None else parse_mode)
+            telegram_line_height: int = config['telegram_line_height']
+            max_message_length: int = config['telegram_max_msg_length'] if max_message_length is None else (
+                max_message_length)
         
             self._telegram_token: Optional[str] = telegram_token
             self._chat_id, self._message_thread_id = self._parse_chat_id(telegram_chat_id)
-            self._telegram_parse_mode: Optional[Literal['Markdown']] = telegram_parse_mode
+            self._telegram_parse_mode: Optional[Literal['Markdown', 'MarkdownV2', 'HTML']] = telegram_parse_mode
             self.max_message_length: int = max_message_length
             self._messages: List[str] = []
             self.buffer: str = ''

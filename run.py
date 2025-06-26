@@ -1,11 +1,11 @@
 # __author__ = 'InfSub'
 # __contact__ = 'https:/t.me/InfSub'
 # __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/25'
+# __date__ = '2025/06/26'
 # __deprecated__ = False
 __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.9.0.0'
+# __version__ = '1.9.0.2'
 
 import logging
 from os import getlogin
@@ -14,10 +14,15 @@ from subprocess import check_call, run as sub_run, CalledProcessError
 from pathlib import Path
 from typing import Dict, Any
 from venv import create as venv_create
+from configparser import ConfigParser
 
 from config import Config, ConfigNames
 
 
+# Дефолтные значения для логирования
+DEFAULT_LOG_FORMAT = '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-10s| %(funcName)-27s| %(message)s'
+DEFAULT_LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
+DEFAULT_LOG_LEVEL = 'INFO'
 
 LOG_MESSAGE = {
     'venv_create': {
@@ -89,18 +94,18 @@ LOG_MESSAGE = {
 
 class VirtualEnvironmentManager:
     def __init__(self) -> None:
-        config: Dict[str: Any] = Config().get_config(ConfigNames.RUN)
+        config: Dict[str, Any] = {**Config().get_config(ConfigNames.RUN), **Config().get_config(ConfigNames.MSG)}
 
         individual: bool = False if getlogin().lower() == __maintainer__.lower() else config.get(
-            'VENV_INDIVIDUAL', True)
+            'run_venv_individual', True)
         git_pull_enabled: bool = False if getlogin().lower() == __maintainer__.lower() else config.get(
-            'GIT_PULL_ENABLED', True)
+            'run_git_pull_enabled', True)
         
-        self._log_language = config.get('LOG_LANGUAGE', 'en')
-        self._main_script = config.get('MAIN_SCRIPT')
-        self._requirements_file = config.get('REQUIREMENTS_FILE', 'requirements.txt')
+        self._log_language = config.get('msg_language', 'en')
+        self._main_script = config.get('run_main_script')
+        self._requirements_file = config.get('run_requirements_file', 'requirements.txt')
 
-        venv_path: Path = Path(config.get('VENV_PATH', '.venv'))
+        venv_path: Path = Path(config.get('run_venv_path', '.venv'))
         if individual:
             self.venv_dir = venv_path.with_name(f'{venv_path.name}_{getlogin()}')
         else:
@@ -190,6 +195,90 @@ class VirtualEnvironmentManager:
                     file=str(self.venv_dir), error='Directory not found.'))
 
 
+def setup_logging():
+    """
+    Настраивает логирование на основе config.ini.
+    Удаляет часть с log_color из FORMAT_CONSOLE так как colorlog еще не установлен.
+    """
+    try:
+        # Загружаем config.ini
+        config = ConfigParser(interpolation=None)
+        ini_path = Path(Path(__file__).parent, CONFIG_FILE)
+        
+        if ini_path.exists():
+            config.read(ini_path, encoding='utf-8')
+            
+            # Получаем параметры из секций LOG и LOGFORMAT
+            log_section = dict(config['LOG']) if 'LOG' in config else {}
+            logformat_section = dict(config['LOGFORMAT']) if 'LOGFORMAT' in config else {}
+            
+            # Получаем уровни логирования
+            level_root = log_section.get('LEVEL_ROOT', DEFAULT_LOG_LEVEL).upper()
+            level_console = log_section.get('LEVEL_CONSOLE', DEFAULT_LOG_LEVEL).upper()
+            level_file = log_section.get('LEVEL_FILE', 'WARNING').upper()
+            
+            # Получаем формат даты
+            date_format = log_section.get('DATE_FORMAT', DEFAULT_LOG_DATE_FORMAT)
+            
+            # Получаем форматы и обрабатываем их
+            format_console = log_section.get('FORMAT_CONSOLE', DEFAULT_LOG_FORMAT)
+            format_file = log_section.get('FORMAT_FILE', DEFAULT_LOG_FORMAT)
+            
+            # Удаляем часть с log_color так как colorlog еще не установлен
+            format_console = format_console.replace('%(log_color)s', '')
+            format_file = format_file.replace('%(log_color)s', '')
+            
+            # Подставляем значения из LOGFORMAT секции (по аналогии с config.py)
+            for key, value in logformat_section.items():
+                format_console = format_console.replace(f'${{LOGFORMAT_{key}}}', value)
+                format_file = format_file.replace(f'${{LOGFORMAT_{key}}}', value)
+            
+            # Обрабатываем escape-последовательности
+            format_console = format_console.replace(r'\t', '\t').replace(r'\n', '\n')
+            format_file = format_file.replace(r'\t', '\t').replace(r'\n', '\n')
+            
+            # Создаем директорию для логов если она не существует
+            log_dir = log_section.get('DIR', 'logs')
+            log_file = log_section.get('FILE', 'app.log')
+            
+            # Форматируем путь к файлу с датой
+            from datetime import datetime
+            current_date = datetime.now()
+            log_dir = current_date.strftime(log_dir)
+            log_file = current_date.strftime(log_file)
+            
+            log_path = Path(log_dir)
+            log_path.mkdir(parents=True, exist_ok=True)
+            
+            full_log_path = log_path / log_file
+            
+            # Настраиваем логирование с файловым хендлером
+            logging.basicConfig(level=getattr(logging, level_root, logging.INFO), format=format_console,
+                datefmt=date_format, handlers=[logging.StreamHandler(),  # Консольный хендлер
+                    logging.FileHandler(full_log_path, encoding='utf-8')  # Файловый хендлер
+                ])
+            
+            # Устанавливаем разные уровни для хендлеров
+            root_logger = logging.getLogger()
+            for handler in root_logger.handlers:
+                if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                    handler.setLevel(getattr(logging, level_console, logging.INFO))
+                elif isinstance(handler, logging.FileHandler):
+                    handler.setLevel(getattr(logging, level_file, logging.WARNING))
+                    handler.setFormatter(logging.Formatter(format_file, date_format))
+        else:
+            # Если config.ini не найден, используем дефолтные значения
+            logging.basicConfig(level=logging.INFO, format=DEFAULT_LOG_FORMAT, datefmt=DEFAULT_LOG_DATE_FORMAT)
+    except Exception as e:
+        # В случае любой ошибки используем дефолтные значения
+        logging.basicConfig(level=logging.INFO, format=DEFAULT_LOG_FORMAT, datefmt=DEFAULT_LOG_DATE_FORMAT)
+        # Логируем ошибку только после настройки базового логирования
+        logging.warning(f'Failed to load logging config from config.ini: {e}. Using default values.')
+
+
 if __name__ == '__main__':
+    setup_logging()
+    logging = logging.getLogger(__name__)
+
     manager = VirtualEnvironmentManager()
     manager.setup()
