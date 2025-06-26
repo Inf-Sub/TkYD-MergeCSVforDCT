@@ -53,7 +53,7 @@ class WidthExtractor(DataExtractor):
                 barcode_value = row[PackingColumns.BARCODE.value]
                 source_value = row[StorageColumns.SOURCE_FILE.value]
                 message = (
-                    f'*For product:* `{barcode_value}` the width value `{value}` was outside the acceptable range.\n\n*Source:* `{source_value}`'
+                    f'*For product:* `{barcode_value}` the width value `{value}` was outside the acceptable range.\n\n*Source:* ```{source_value}```'
                 )
                 self.logger.warning(message.replace('\n', ' ').replace('*', '').replace('`', ''))
                 tasks.append(aio_create_task(self.telegram_messenger.add_message(f'️🟥 {message}')))
