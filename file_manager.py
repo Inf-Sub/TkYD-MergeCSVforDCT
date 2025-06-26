@@ -1,12 +1,12 @@
 # __author__ = 'InfSub'
 # __contact__ = 'ADmin@TkYD.ru'
 # __copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/26'
+# __date__ = '2025/06/27'
 # __deprecated__ = False
 # __email__ = 'ADmin@TkYD.ru'
 # __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.7.5.0'
+# __version__ = '2.0.0.1'
 
 from typing import Dict, List, Optional
 from aiofiles import open as aio_open
@@ -15,8 +15,6 @@ from os import walk as os_walk
 from re import match
 from datetime import datetime, timedelta
 from shutil import copy as shutil_copy
-
-from column_enums import StorageColumns
 
 
 class FileManager:
@@ -69,7 +67,8 @@ class FileManager:
             self.logger.warning(message.replace('\n', ' ').replace('*', '').replace('`', ''))
             await telegram_messenger.add_message(f'🟥️ {message}')
     
-    async def find_matching_files(self, directory: str, pattern: str) -> Dict[str, str]:
+    @staticmethod
+    async def find_matching_files(directory: str, pattern: str) -> Dict[str, str]:
         """Поиск файлов по шаблону"""
         files_dict = {}
         for root, dirs, files in os_walk(directory):
@@ -90,10 +89,12 @@ class FileManager:
         except Exception as e:
             self.logger.error(f'Failed to copy file from "{src}" to "{dst}": {e}.')
     
-    def get_output_path(self, file_path: str, csv_file_name: str) -> str:
+    @staticmethod
+    def get_output_path(file_path: str, csv_file_name: str) -> str:
         """Получение пути для выходного файла"""
         return os_join(dirname(file_path), csv_file_name)
     
-    def get_checker_path(self, file_path: str, csv_file_name_for_checker: str) -> str:
+    @staticmethod
+    def get_checker_path(file_path: str, csv_file_name_for_checker: str) -> str:
         """Получение пути для файла проверки"""
         return os_join(dirname(file_path), csv_file_name_for_checker) 

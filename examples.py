@@ -1,20 +1,19 @@
 # __author__ = 'InfSub'
 # __contact__ = 'ADmin@TkYD.ru'
 # __copyright__ = 'Copyright (C) 2024-2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/26'
+# __date__ = '2025/06/27'
 # __deprecated__ = False
 # __email__ = 'ADmin@TkYD.ru'
 # __maintainer__ = 'InfSub'
 # __status__ = 'Production'  # 'Production / Development'
-# __version__ = '1.7.5.0'
+# __version__ = '2.0.0.1'
 
 """
 Примеры использования новой ООП архитектуры CSV Merge Tool
 """
 
 import asyncio
-from typing import Dict, List
-from pandas import DataFrame, Series
+from pandas import Series
 
 from csv_processor import CSVProcessor
 from column_enums import PackingColumns, DescriptionColumns, StorageColumns, AggregationColumns, ColumnGroups

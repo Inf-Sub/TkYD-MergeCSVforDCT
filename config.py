@@ -1,17 +1,16 @@
 # __author__ = 'InfSub'
 # __contact__ = 'https:/t.me/InfSub'
 # __copyright__ = 'Copyright (C) 2025, [LegioNTeaM] InfSub'
-# __date__ = '2025/06/26'
+# __date__ = '2025/06/27'
 # __deprecated__ = False
 # __maintainer__ = 'InfSub'
 # __status__ = 'Development'  # 'Production / Development'
-# __version__ = '2.0.0.0'
+# __version__ = '2.0.0.1'
 
 from enum import Enum
 from os import getenv
 from typing import Dict, Any
 from datetime import datetime as dt
-import logging
 from configparser import ConfigParser
 from pathlib import Path
 from dotenv import load_dotenv
