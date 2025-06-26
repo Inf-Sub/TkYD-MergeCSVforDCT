@@ -162,6 +162,10 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+# Cursor
+.cursor/
+,run/
+
 # Project work files:
 TFS*
 *.csv
@@ -169,3 +173,4 @@ run_*.py
 *_v*.py
 test_*.py
 .test/
+config.ini
