@@ -172,6 +172,6 @@ TFS*
 run_*.py
 *_v*.py
 test_*.py
-.test/
-.md/
+/.test/
 config.ini
+/.md/
