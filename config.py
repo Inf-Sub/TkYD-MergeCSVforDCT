@@ -78,7 +78,8 @@ class Config:
         # Проверяем, инициализирован ли уже экземпляр
         if not hasattr(self, '_initialized'):
             self._initialized = True  # Устанавливаем флаг инициализации
-            logging.info('Загрузка переменных окружения из файла .env и config.ini')
+            # Убираем логирование отсюда, чтобы не логировать до настройки логирования
+            # logging.info('Загрузка переменных окружения из файла .env и config.ini')
             load_dotenv()
             self._current_date = dt.now()
             self._config_ini = self._load_ini()
