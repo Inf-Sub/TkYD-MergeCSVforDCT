@@ -5,7 +5,7 @@
 # __deprecated__ = False
 # __maintainer__ = 'InfSub'
 # __status__ = 'Development'  # 'Production / Development'
-# __version__ = '1.0.7.0'
+# __version__ = '2.1.0.0'
 
 import logging
 import logging.config

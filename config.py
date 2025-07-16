@@ -5,7 +5,7 @@
 # __deprecated__ = False
 # __maintainer__ = 'InfSub'
 # __status__ = 'Development'  # 'Production / Development'
-# __version__ = '2.0.0.1'
+# __version__ = '2.1.0.0'
 
 from enum import Enum
 from os import getenv
