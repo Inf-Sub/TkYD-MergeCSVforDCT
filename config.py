@@ -13,7 +13,7 @@ from typing import Dict, Any
 from datetime import datetime as dt
 from configparser import ConfigParser
 from pathlib import Path
-from dotenv import load_dotenv
+# from dotenv import load_dotenv  # Убираю из base, будет только в наследнике
 
 
 class ConfigNames(Enum):
@@ -42,83 +42,51 @@ class ConfigNames(Enum):
         return f'<ConfigNames.{self.name} (value={self.value})>'
 
 
-class Config:
+class BaseConfig:
     """
-    Синглтон для загрузки и хранения конфигурации приложения.
-    
-    Загружает параметры из двух источников:
-    - config.ini (приоритет) - для не приватных настроек
-    - .env файл (fallback) - для приватных настроек (токены, ID)
-    
-    Реализует паттерн Singleton для обеспечения единственного экземпляра
-    конфигурации во всем приложении.
+    Базовый класс для работы только с config.ini (без .env и dotenv).
+    Не использует сторонние зависимости.
     """
-    _instance = None
-    
-    def __new__(cls, *args, **kwargs) -> 'Config':
-        """
-        Создает новый экземпляр класса Config, если он еще не создан.
-
-        :param args: Позиционные аргументы.
-        :param kwargs: Именованные аргументы.
-        :return: Экземпляр класса Config.
-        """
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-    
     def __init__(self):
-        """
-        Инициализация экземпляра Config.
+        self._current_date = dt.now()
+        self._config_ini = self._load_ini()
 
-        Загружает переменные окружения из файла .env и config.ini и инициализирует параметры.
-        Инициализация происходит только один раз благодаря паттерну Singleton.
-        """
-        # Проверяем, инициализирован ли уже экземпляр
-        if not hasattr(self, '_initialized'):
-            self._initialized = True  # Устанавливаем флаг инициализации
-            # Убираем логирование отсюда, чтобы не логировать до настройки логирования
-            # logging.info('Загрузка переменных окружения из файла .env и config.ini')
-            load_dotenv()
-            self._current_date = dt.now()
-            self._config_ini = self._load_ini()
-            self._env = self._load_env()
-    
     @staticmethod
     def _load_ini():
-        """
-        Загружает и парсит config.ini файл.
-        
-        :return: ConfigParser объект с загруженными данными из config.ini.
-        """
         config = ConfigParser(interpolation=None)
         ini_path = Path(Path(__file__).parent, 'config.ini')
         config.read(ini_path, encoding='utf-8')
         return config
 
     def _get_ini_section(self, section: ConfigNames | str) -> dict:
-        """
-        Получает секцию из config.ini файла.
-        
-        :param section: ConfigNames enum или строка с именем секции.
-        :return: Словарь с параметрами секции (ключи в верхнем регистре).
-        """
         section_name = section.value.upper() if isinstance(section, ConfigNames) else section.upper()
         if section_name in self._config_ini:
             return {k.upper(): v for k, v in self._config_ini[section_name].items()}
         return {}
 
-    def _load_env(self) -> Dict[str, Any]:
+    def get_config(self, *config_types: str | ConfigNames) -> Dict[str, Any]:
+        result = {}
+        for config_type in config_types:
+            prefix = config_type.value if isinstance(config_type, ConfigNames) else config_type
+            # Только из ini, без env
+            for key, value in self._get_all_ini_vars().items():
+                if key.startswith(prefix.upper() + '_'):
+                    result[key.lower()] = value
+        return result
+
+    def _get_all_ini_vars(self) -> Dict[str, Any]:
+        # Собирает все переменные из всех секций ini (ключи в верхнем регистре)
+        all_vars = {}
+        for section in self._config_ini.sections():
+            for k, v in self._config_ini[section].items():
+                all_vars[k.upper()] = v
+        return all_vars
+
+    def get_normalized_config(self) -> Dict[str, Any]:
         """
-        Загружает и объединяет параметры из config.ini и .env файлов.
-        
-        Приоритет: config.ini > .env файл
-        Приватные параметры (токены, ID) загружаются только из .env
-        
-        :return: Словарь с объединенными параметрами конфигурации.
+        Возвращает параметры с "человеческими" именами, аналогично Config, но только из ini.
         """
         current_date = self._current_date
-        # INI > ENV
         ini_csv = self._get_ini_section(ConfigNames.CSV)
         ini_datas = self._get_ini_section(ConfigNames.DATAS)
         ini_log = self._get_ini_section(ConfigNames.LOG)
@@ -127,15 +95,8 @@ class Config:
         ini_msg = self._get_ini_section(ConfigNames.MSG)
         ini_inactivity = self._get_ini_section(ConfigNames.INACTIVITY)
         ini_run = self._get_ini_section(ConfigNames.RUN)
-        
-        # Подстановка переменных LOGFORMAT в форматы
+
         def substitute_logformat(format_str: str) -> str:
-            """
-            Подставляет значения из LOGFORMAT секции в строки форматов логов.
-            
-            :param format_str: Строка формата с плейсхолдерами ${LOGFORMAT_XXX}.
-            :return: Строка с подставленными значениями.
-            """
             if not format_str:
                 return format_str
             for key, value in ini_logformat.items():
@@ -144,69 +105,110 @@ class Config:
 
         return {
             # CSV
-            'CSV_SEPARATOR': ini_csv.get('SEPARATOR', getenv('CSV_SEPARATOR', ';')),
-            'CSV_PATH_TEMPLATE_DIRECTORY': ini_csv.get('PATH_TEMPLATE_DIRECTORY', getenv('CSV_PATH_TEMPLATE_DIRECTORY')),
-            'CSV_PATH_DIRECTORY': ini_csv.get('PATH_DIRECTORY', getenv('CSV_PATH_DIRECTORY')),
-            'CSV_FILE_PATTERN': ini_csv.get('FILE_PATTERN', getenv('CSV_FILE_PATTERN')),
-            'CSV_FILE_NAME_FOR_DTA': ini_csv.get('FILE_NAME_FOR_DTA', getenv('CSV_FILE_NAME_FOR_DTA', '')),
-            'CSV_FILE_NAME_FOR_CHECKER': ini_csv.get('FILE_NAME_FOR_CHECKER', getenv('CSV_FILE_NAME_FOR_CHECKER', '')),
-            
+            'CSV_SEPARATOR': ini_csv.get('SEPARATOR', ';'),
+            'CSV_PATH_TEMPLATE_DIRECTORY': ini_csv.get('PATH_TEMPLATE_DIRECTORY'),
+            'CSV_PATH_DIRECTORY': ini_csv.get('PATH_DIRECTORY'),
+            'CSV_FILE_PATTERN': ini_csv.get('FILE_PATTERN'),
+            'CSV_FILE_NAME_FOR_DTA': ini_csv.get('FILE_NAME_FOR_DTA', ''),
+            'CSV_FILE_NAME_FOR_CHECKER': ini_csv.get('FILE_NAME_FOR_CHECKER', ''),
             # DATAS
-            'DATAS_MAX_WIDTH': int(ini_datas.get('MAX_WIDTH', getenv('DATAS_MAX_WIDTH', 200))),
-            'DATAS_DECIMAL_PLACES': int(ini_datas.get('DECIMAL_PLACES', getenv('DATAS_DECIMAL_PLACES', 2))),
-            'DATAS_NAME_OF_PRODUCT_TYPE': ini_datas.get('NAME_OF_PRODUCT_TYPE', getenv('DATAS_NAME_OF_PRODUCT_TYPE')),
-            
+            'DATAS_MAX_WIDTH': int(ini_datas.get('MAX_WIDTH', 200)) if ini_datas.get('MAX_WIDTH') else 200,
+            'DATAS_DECIMAL_PLACES': int(ini_datas.get('DECIMAL_PLACES', 2)) if ini_datas.get('DECIMAL_PLACES') else 2,
+            'DATAS_NAME_OF_PRODUCT_TYPE': ini_datas.get('NAME_OF_PRODUCT_TYPE'),
             # INACTIVITY
-            'INACTIVITY_LIMIT_HOURS': int(ini_inactivity.get('LIMIT_HOURS', getenv('INACTIVITY_LIMIT_HOURS', 24))),
-            
-            # TELEGRAM (только приватные из env)
-            'TELEGRAM_TOKEN': getenv('TELEGRAM_TOKEN'),
-            'TELEGRAM_CHAT_ID': getenv('TELEGRAM_CHAT_ID'),
-            'TELEGRAM_MAX_MSG_LENGTH': int(ini_telegram.get('MAX_MSG_LENGTH', getenv('TELEGRAM_MAX_MSG_LENGTH', 4096))),
-            'TELEGRAM_LINE_HEIGHT': int(ini_telegram.get('LINE_HEIGHT', getenv('TELEGRAM_LINE_HEIGHT', 25))),
-            'TELEGRAM_PARSE_MODE': ini_telegram.get('PARSE_MODE', getenv('TELEGRAM_PARSE_MODE', None)),
-            
+            'INACTIVITY_LIMIT_HOURS': int(ini_inactivity.get('LIMIT_HOURS', 24)) if ini_inactivity.get('LIMIT_HOURS') else 24,
+            # TELEGRAM
+            'TELEGRAM_MAX_MSG_LENGTH': int(ini_telegram.get('MAX_MSG_LENGTH', 4096)) if ini_telegram.get('MAX_MSG_LENGTH') else 4096,
+            'TELEGRAM_LINE_HEIGHT': int(ini_telegram.get('LINE_HEIGHT', 25)) if ini_telegram.get('LINE_HEIGHT') else 25,
+            'TELEGRAM_PARSE_MODE': ini_telegram.get('PARSE_MODE'),
             # MSG
-            'MSG_LANGUAGE': ini_msg.get('LANGUAGE', getenv('MSG_LANGUAGE', 'en')).lower(),
-            
+            'MSG_LANGUAGE': ini_msg.get('LANGUAGE', 'en').lower() if ini_msg.get('LANGUAGE') else 'en',
             # LOG
-            'LOG_DIR': current_date.strftime(ini_log.get('DIR', getenv('LOG_DIR', r'logs\%Y\%Y.%m'))),
-            'LOG_FILE': current_date.strftime(ini_log.get('FILE', getenv('LOG_FILE', 'backup_log_%Y.%m.%d.log'))),
-            'LOG_LEVEL_ROOT': ini_log.get('LEVEL_ROOT', getenv('LOG_LEVEL_ROOT', 'INFO')).upper(),
-            'LOG_LEVEL_CONSOLE': ini_log.get('LEVEL_CONSOLE', getenv('LOG_LEVEL_CONSOLE', 'INFO')).upper(),
-            'LOG_LEVEL_FILE': ini_log.get('LEVEL_FILE', getenv('LOG_LEVEL_FILE', 'WARNING')).upper(),
-            'LOG_IGNORE_LIST': [item.strip() for item in ini_log.get(
-                'IGNORE_LIST', getenv('LOG_IGNORE_LIST', '')).split(',') if item.strip()],
-            'LOG_FORMAT_CONSOLE': substitute_logformat(ini_log.get('FORMAT_CONSOLE', getenv('LOG_FORMAT_CONSOLE', ''))),
-            'LOG_FORMAT_FILE': substitute_logformat(ini_log.get('FORMAT_FILE', getenv('LOG_FORMAT_FILE', ''))),
-            'LOG_DATE_FORMAT': ini_log.get('DATE_FORMAT', getenv('LOG_DATE_FORMAT', '%Y.%m.%d %H:%M:%S')),
-            'LOG_CONSOLE_LANGUAGE': ini_log.get('CONSOLE_LANGUAGE', getenv('LOG_CONSOLE_LANGUAGE', 'en')).lower(),
-            
+            'LOG_DIR': current_date.strftime(ini_log.get('DIR', r'logs\%Y\%Y.%m')) if ini_log.get('DIR') else current_date.strftime(r'logs\%Y\%Y.%m'),
+            'LOG_FILE': current_date.strftime(ini_log.get('FILE', 'backup_log_%Y.%m.%d.log')) if ini_log.get('FILE') else current_date.strftime('backup_log_%Y.%m.%d.log'),
+            'LOG_LEVEL_ROOT': ini_log.get('LEVEL_ROOT', 'INFO').upper() if ini_log.get('LEVEL_ROOT') else 'INFO',
+            'LOG_LEVEL_CONSOLE': ini_log.get('LEVEL_CONSOLE', 'INFO').upper() if ini_log.get('LEVEL_CONSOLE') else 'INFO',
+            'LOG_LEVEL_FILE': ini_log.get('LEVEL_FILE', 'WARNING').upper() if ini_log.get('LEVEL_FILE') else 'WARNING',
+            'LOG_IGNORE_LIST': [item.strip() for item in ini_log.get('IGNORE_LIST', '').split(',') if item.strip()],
+            'LOG_FORMAT_CONSOLE': substitute_logformat(ini_log.get('FORMAT_CONSOLE', '')),
+            'LOG_FORMAT_FILE': substitute_logformat(ini_log.get('FORMAT_FILE', '')),
+            'LOG_DATE_FORMAT': ini_log.get('DATE_FORMAT', '%Y.%m.%d %H:%M:%S') if ini_log.get('DATE_FORMAT') else '%Y.%m.%d %H:%M:%S',
+            'LOG_CONSOLE_LANGUAGE': ini_log.get('CONSOLE_LANGUAGE', 'en').lower() if ini_log.get('CONSOLE_LANGUAGE') else 'en',
             # RUN
-            'RUN_MAIN_SCRIPT': ini_run.get('MAIN_SCRIPT', getenv('RUN_MAIN_SCRIPT', 'merge_csv')),
-            'RUN_REQUIREMENTS_FILE': ini_run.get(
-                'REQUIREMENTS_FILE', getenv('RUN_REQUIREMENTS_FILE', 'requirements.txt')),
-            'RUN_VENV_PATH': ini_run.get('VENV_PATH', getenv('RUN_VENV_PATH', '.venv')),
-            'RUN_VENV_INDIVIDUAL': ini_run.get(
-                'VENV_INDIVIDUAL', getenv('RUN_VENV_INDIVIDUAL', 'True')).lower() in ('true', '1'),
-            'RUN_GIT_PULL_ENABLED': ini_run.get('GIT_PULL_ENABLED', getenv('RUN_GIT_PULL_ENABLED', 'True')).lower() in ('true', '1'),
-            'RUN_LOG_OUTPUT_ENABLED': ini_run.get('LOG_OUTPUT_ENABLED', getenv('RUN_LOG_OUTPUT_ENABLED', 'True')).lower() in ('true', '1'),
+            'RUN_MAIN_SCRIPT': ini_run.get('MAIN_SCRIPT', 'merge_csv') if ini_run.get('MAIN_SCRIPT') else 'merge_csv',
+            'RUN_REQUIREMENTS_FILE': ini_run.get('REQUIREMENTS_FILE', 'requirements.txt') if ini_run.get('REQUIREMENTS_FILE') else 'requirements.txt',
+            'RUN_VENV_PATH': ini_run.get('VENV_PATH', '.venv') if ini_run.get('VENV_PATH') else '.venv',
+            'RUN_VENV_INDIVIDUAL': ini_run.get('VENV_INDIVIDUAL', 'True').lower() in ('true', '1') if ini_run.get('VENV_INDIVIDUAL') else True,
+            'RUN_GIT_PULL_ENABLED': ini_run.get('GIT_PULL_ENABLED', 'True').lower() in ('true', '1') if ini_run.get('GIT_PULL_ENABLED') else True,
+            'RUN_LOG_OUTPUT_ENABLED': ini_run.get('LOG_OUTPUT_ENABLED', 'True').lower() in ('true', '1') if ini_run.get('LOG_OUTPUT_ENABLED') else True,
         }
 
-    def get_config(self, *config_types: str | ConfigNames) -> Dict[str, Any]:
-        """
-        Получение конфигурационных параметров по указанным типам.
-        
-        Можно передавать как строки, так и члены Enum ConfigNames.
-        Метод ищет все переменные окружения в self._env, название которых 
-        начинается с указанного префикса (в верхнем регистре, с добавленным подчеркиванием). 
-        Например, для префикса 'CSV' он ищет переменные, начинающиеся с 'CSV_'.
 
-        :param config_types: Один или несколько префиксов, или членов Enum ConfigNames, 
-            по которым осуществляется поиск переменных окружения.
-        :return: Словарь с параметрами, соответствующими указанным префиксам. 
-            Ключи в результате приводятся к нижнему регистру.
-        """
+class Config(BaseConfig):
+    """
+    Расширенный класс: добавляет .env и переменные окружения к ini.
+    Singleton.
+    """
+    _instance = None
+
+    def __new__(cls, *args, **kwargs) -> 'Config':
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if not hasattr(self, '_initialized'):
+            self._initialized = True
+            from dotenv import load_dotenv
+            load_dotenv()
+            super().__init__()
+            self._env = self._load_env()
+
+    def _load_env(self) -> Dict[str, Any]:
+        config = super().get_normalized_config()
+        # Переопределяем только те ключи, которые реально могут быть в .env
+        # CSV
+        config['CSV_SEPARATOR'] = getenv('CSV_SEPARATOR', config['CSV_SEPARATOR'])
+        config['CSV_PATH_TEMPLATE_DIRECTORY'] = getenv('CSV_PATH_TEMPLATE_DIRECTORY', config['CSV_PATH_TEMPLATE_DIRECTORY'])
+        config['CSV_PATH_DIRECTORY'] = getenv('CSV_PATH_DIRECTORY', config['CSV_PATH_DIRECTORY'])
+        config['CSV_FILE_PATTERN'] = getenv('CSV_FILE_PATTERN', config['CSV_FILE_PATTERN'])
+        config['CSV_FILE_NAME_FOR_DTA'] = getenv('CSV_FILE_NAME_FOR_DTA', config['CSV_FILE_NAME_FOR_DTA'])
+        config['CSV_FILE_NAME_FOR_CHECKER'] = getenv('CSV_FILE_NAME_FOR_CHECKER', config['CSV_FILE_NAME_FOR_CHECKER'])
+        # DATAS
+        config['DATAS_MAX_WIDTH'] = int(getenv('DATAS_MAX_WIDTH', config['DATAS_MAX_WIDTH']))
+        config['DATAS_DECIMAL_PLACES'] = int(getenv('DATAS_DECIMAL_PLACES', config['DATAS_DECIMAL_PLACES']))
+        config['DATAS_NAME_OF_PRODUCT_TYPE'] = getenv('DATAS_NAME_OF_PRODUCT_TYPE', config['DATAS_NAME_OF_PRODUCT_TYPE'])
+        # INACTIVITY
+        config['INACTIVITY_LIMIT_HOURS'] = int(getenv('INACTIVITY_LIMIT_HOURS', config['INACTIVITY_LIMIT_HOURS']))
+        # TELEGRAM
+        config['TELEGRAM_TOKEN'] = getenv('TELEGRAM_TOKEN', None)
+        config['TELEGRAM_CHAT_ID'] = getenv('TELEGRAM_CHAT_ID', None)
+        config['TELEGRAM_MAX_MSG_LENGTH'] = int(getenv('TELEGRAM_MAX_MSG_LENGTH', config['TELEGRAM_MAX_MSG_LENGTH']))
+        config['TELEGRAM_LINE_HEIGHT'] = int(getenv('TELEGRAM_LINE_HEIGHT', config['TELEGRAM_LINE_HEIGHT']))
+        config['TELEGRAM_PARSE_MODE'] = getenv('TELEGRAM_PARSE_MODE', config['TELEGRAM_PARSE_MODE'])
+        # MSG
+        config['MSG_LANGUAGE'] = getenv('MSG_LANGUAGE', config['MSG_LANGUAGE']).lower()
+        # LOG
+        config['LOG_DIR'] = getenv('LOG_DIR', config['LOG_DIR'])
+        config['LOG_FILE'] = getenv('LOG_FILE', config['LOG_FILE'])
+        config['LOG_LEVEL_ROOT'] = getenv('LOG_LEVEL_ROOT', config['LOG_LEVEL_ROOT']).upper()
+        config['LOG_LEVEL_CONSOLE'] = getenv('LOG_LEVEL_CONSOLE', config['LOG_LEVEL_CONSOLE']).upper()
+        config['LOG_LEVEL_FILE'] = getenv('LOG_LEVEL_FILE', config['LOG_LEVEL_FILE']).upper()
+        config['LOG_IGNORE_LIST'] = [item.strip() for item in getenv('LOG_IGNORE_LIST', ','.join(config['LOG_IGNORE_LIST'])).split(',') if item.strip()]
+        config['LOG_FORMAT_CONSOLE'] = getenv('LOG_FORMAT_CONSOLE', config['LOG_FORMAT_CONSOLE'])
+        config['LOG_FORMAT_FILE'] = getenv('LOG_FORMAT_FILE', config['LOG_FORMAT_FILE'])
+        config['LOG_DATE_FORMAT'] = getenv('LOG_DATE_FORMAT', config['LOG_DATE_FORMAT'])
+        config['LOG_CONSOLE_LANGUAGE'] = getenv('LOG_CONSOLE_LANGUAGE', config['LOG_CONSOLE_LANGUAGE']).lower()
+        # RUN
+        config['RUN_MAIN_SCRIPT'] = getenv('RUN_MAIN_SCRIPT', config['RUN_MAIN_SCRIPT'])
+        config['RUN_REQUIREMENTS_FILE'] = getenv('RUN_REQUIREMENTS_FILE', config['RUN_REQUIREMENTS_FILE'])
+        config['RUN_VENV_PATH'] = getenv('RUN_VENV_PATH', config['RUN_VENV_PATH'])
+        config['RUN_VENV_INDIVIDUAL'] = getenv('RUN_VENV_INDIVIDUAL', str(config['RUN_VENV_INDIVIDUAL'])).lower() in ('true', '1')
+        config['RUN_GIT_PULL_ENABLED'] = getenv('RUN_GIT_PULL_ENABLED', str(config['RUN_GIT_PULL_ENABLED'])).lower() in ('true', '1')
+        config['RUN_LOG_OUTPUT_ENABLED'] = getenv('RUN_LOG_OUTPUT_ENABLED', str(config['RUN_LOG_OUTPUT_ENABLED'])).lower() in ('true', '1')
+        return config
+
+    def get_config(self, *config_types: str | ConfigNames) -> Dict[str, Any]:
         result = {}
         for config_type in config_types:
             prefix = config_type.value if isinstance(config_type, ConfigNames) else config_type

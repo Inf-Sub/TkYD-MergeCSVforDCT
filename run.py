@@ -16,12 +16,12 @@ from pathlib import Path
 from venv import create as venv_create
 from configparser import ConfigParser
 
-from config import Config, ConfigNames
+from config import BaseConfig, ConfigNames
 
 # Константы
 CONFIG_FILE = 'config.ini'
 DEFAULT_LOG_FORMAT = (
-    '%(filename)s:%(lineno)d\n%(asctime)-20s| %(levelname)-8s| %(name)-14| %(funcName)-27s| %(message)s')
+    '%(filename)s:%(lineno)d | %(asctime)s | %(levelname)s | %(name)s | %(funcName)s | %(message)s')
 DEFAULT_LOG_DATE_FORMAT = '%Y.%m.%d %H:%M:%S'
 DEFAULT_LOG_LEVEL = 'INFO'
 
@@ -68,7 +68,7 @@ class VirtualEnvironmentManager:
     def __init__(self) -> None:
         self._config = None
         self._log_language = 'en'  # значение по умолчанию
-        self._main_script = 'merge_csv_oop'  # значение по умолчанию
+        self._main_script = 'merge_csv'  # значение по умолчанию
         self._requirements_file = 'requirements.txt'  # значение по умолчанию
         self.venv_dir = Path('.venv')  # значение по умолчанию
         self.git_pull_enabled = True  # значение по умолчанию
@@ -83,23 +83,19 @@ class VirtualEnvironmentManager:
     def _load_config(self) -> None:
         """Загружает конфигурацию (вызывается после настройки логирования)"""
         if self._config is None:
-            self._config = {**Config().get_config(ConfigNames.RUN), **Config().get_config(ConfigNames.MSG)}
-            
+            self._config = BaseConfig().get_normalized_config()
             # Определяем настройки
             is_maintainer = getlogin().lower() == __maintainer__.lower()
-            individual = not is_maintainer and self._config.get('run_venv_individual', True)
-            git_pull_enabled = not is_maintainer and self._config.get('run_git_pull_enabled', True)
-            
-            self._log_language = self._config.get('msg_language', 'en')
-            self._main_script = self._config.get('run_main_script', 'merge_csv_oop')
-            self._requirements_file = self._config.get('run_requirements_file', 'requirements.txt')
-            self.log_output_enabled = self._config.get('run_log_output_enabled', True)
-            
+            individual = not is_maintainer and self._config.get('RUN_VENV_INDIVIDUAL', True)
+            git_pull_enabled = not is_maintainer and self._config.get('RUN_GIT_PULL_ENABLED', True)
+            self._log_language = self._config.get('MSG_LANGUAGE') or 'en'
+            self._main_script = self._config.get('RUN_MAIN_SCRIPT') or 'merge_csv'
+            self._requirements_file = self._config.get('RUN_REQUIREMENTS_FILE') or 'requirements.txt'
+            self.log_output_enabled = self._config.get('RUN_LOG_OUTPUT_ENABLED', True)
             # Настройка пути к виртуальному окружению
-            venv_path = Path(self._config.get('run_venv_path', '.venv'))
+            venv_path = Path(self._config.get('RUN_VENV_PATH') or '.venv')
             self.venv_dir = venv_path.with_name(f'{venv_path.name}_{getlogin()}') if individual else venv_path
             self.git_pull_enabled = git_pull_enabled
-            
             # Обновляем пути к исполняемым файлам
             self.python_executable = Path(self.venv_dir, self._bin_dir, f'python{self._exe_ext}')
             self.pip_executable = Path(self.venv_dir, self._bin_dir,  f'pip{self._exe_ext}')
@@ -197,52 +193,31 @@ class VirtualEnvironmentManager:
 
 
 def setup_logging():
-    """Настраивает логирование на основе config.ini"""
+    """Настраивает логирование на основе config.ini через get_normalized_config()"""
     try:
-        # Используем Config() для основных секций
-        config_data = Config().get_config(ConfigNames.LOG)
-        
-        # Читаем LOGFORMAT напрямую из config.ini (Config().get_config() не возвращает эту секцию)
-        config_parser = ConfigParser(interpolation=None)
-        ini_path = Path(Path(__file__).parent, CONFIG_FILE)
-        config_parser.read(ini_path, encoding='utf-8')
-        logformat_data = dict(config_parser['LOGFORMAT']) if 'LOGFORMAT' in config_parser else {}
-        
+        config_data = BaseConfig().get_normalized_config()
         # Уровни логирования
-        level_root = config_data.get('log_level_root', DEFAULT_LOG_LEVEL).upper()
-        level_console = config_data.get('log_level_console', DEFAULT_LOG_LEVEL).upper()
-        level_file = config_data.get('log_level_file', 'WARNING').upper()
-        
+        level_root = str(config_data.get('LOG_LEVEL_ROOT') or DEFAULT_LOG_LEVEL)
+        level_console = str(config_data.get('LOG_LEVEL_CONSOLE') or DEFAULT_LOG_LEVEL)
+        level_file = str(config_data.get('LOG_LEVEL_FILE') or 'WARNING')
         # Форматы
-        date_format = config_data.get('log_date_format', DEFAULT_LOG_DATE_FORMAT)
-        format_console = config_data.get('log_format_console', DEFAULT_LOG_FORMAT)
-        format_file = config_data.get('log_format_file', DEFAULT_LOG_FORMAT)
-        
+        date_format = str(config_data.get('LOG_DATE_FORMAT') or DEFAULT_LOG_DATE_FORMAT)
+        format_console = str(config_data.get('LOG_FORMAT_CONSOLE') or DEFAULT_LOG_FORMAT)
+        format_file = str(config_data.get('LOG_FORMAT_FILE') or DEFAULT_LOG_FORMAT)
         # Удаляем colorlog (еще не установлен)
         format_console = format_console.replace('%(log_color)s', '')
         format_file = format_file.replace('%(log_color)s', '')
-        
-        # Подставляем значения из LOGFORMAT
-        for key, value in logformat_data.items():
-            format_console = format_console.replace(f'${{LOGFORMAT_{key.upper()}}}', value)
-            format_file = format_file.replace(f'${{LOGFORMAT_{key.upper()}}}', value)
-        
         # Обрабатываем escape-последовательности
         format_console = format_console.replace(r'\t', '\t').replace(r'\n', '\n')
         format_file = format_file.replace(r'\t', '\t').replace(r'\n', '\n')
-        
         # Создаем директорию для логов
         from datetime import datetime
         current_date = datetime.now()
-        
-        log_dir = current_date.strftime(config_data.get('log_dir', 'logs'))
-        log_file = current_date.strftime(config_data.get('log_file', 'app.log'))
-        
+        log_dir = str(config_data.get('LOG_DIR') or 'logs')
+        log_file = str(config_data.get('LOG_FILE') or 'app.log')
         log_path = Path(log_dir)
         log_path.mkdir(parents=True, exist_ok=True)
-        
         full_log_path = log_path / log_file
-        
         # Настраиваем логирование
         logging.basicConfig(
             level=getattr(logging, level_root, logging.INFO),
@@ -253,7 +228,6 @@ def setup_logging():
                 logging.FileHandler(full_log_path, encoding='utf-8')
             ]
         )
-        
         # Устанавливаем разные уровни для хендлеров
         root_logger = logging.getLogger()
         for handler in root_logger.handlers:
@@ -262,7 +236,6 @@ def setup_logging():
             elif isinstance(handler, logging.FileHandler):
                 handler.setLevel(getattr(logging, level_file, logging.WARNING))
                 handler.setFormatter(logging.Formatter(format_file, date_format))
-                
     except Exception as e:
         # Fallback к дефолтным значениям
         logging.basicConfig(

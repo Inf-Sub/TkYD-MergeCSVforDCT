@@ -9,16 +9,17 @@
 
 import logging
 import logging.config
+import logging.handlers
 from colorlog import ColoredFormatter
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 from os.path import join as os_join
 from datetime import datetime as dt
 
-from config import Config, ConfigNames
+from config import BaseConfig, ConfigNames
 
 
-def setup_logger(log_path: str | None = None) -> str | None:
+def setup_logger(log_path: Optional[str] = None) -> Optional[str]:
     """
     Configures the logging settings, including file paths and formats.
 
@@ -26,29 +27,33 @@ def setup_logger(log_path: str | None = None) -> str | None:
 
     :return: None
     """
-    config: Dict[str, str] = Config().get_config(ConfigNames.LOG)
+    config = BaseConfig().get_normalized_config()
 
-    log_level_console: str = config.get('log_level_console')
-    log_level_file: str = config.get('log_level_file')
-    log_level_root: str = config.get('log_level_root', 'INFO')
-    log_format_console: str = config.get('log_format_console')
-    log_format_file: str = config.get('log_format_file')
-    log_date_format: str = config.get('log_date_format')
-    log_console_language: str = config.get('log_console_language')
-    log_dir: str = config.get('log_dir', r'logs\%Y\%Y.%m')
-    log_file: str = config.get('log_file', 'backup_log_%Y.%m.%d.log')
-    log_ignore_list: List[str] = config.get('log_ignore_list', [])
+    log_level_console = str(config.get('LOG_LEVEL_CONSOLE') or 'INFO')
+    log_level_file = str(config.get('LOG_LEVEL_FILE') or 'WARNING')
+    log_level_root = str(config.get('LOG_LEVEL_ROOT') or 'INFO')
+    log_format_console = str(config.get('LOG_FORMAT_CONSOLE') or '')
+    log_format_file = str(config.get('LOG_FORMAT_FILE') or '')
+    log_date_format = str(config.get('LOG_DATE_FORMAT') or '%Y.%m.%d %H:%M:%S')
+    log_console_language = str(config.get('LOG_CONSOLE_LANGUAGE') or 'en')
+    log_dir = str(config.get('LOG_DIR') or r'logs\%Y\%Y.%m')
+    log_file = str(config.get('LOG_FILE') or 'backup_log_%Y.%m.%d.log')
+    log_ignore_list = config.get('LOG_IGNORE_LIST') or []
+    if isinstance(log_ignore_list, str):
+        log_ignore_list = [log_ignore_list]
+    elif not isinstance(log_ignore_list, list):
+        log_ignore_list = []
+    log_ignore_list = [str(x) for x in log_ignore_list if x]
 
     if log_path is None:
         log_path = os_join(log_dir, log_file)
-
-    log_path = dt.now().strftime(log_path)
+    log_path_obj = Path(dt.now().strftime(str(log_path)))
 
     try:
-        log_dir = Path(log_path).parent
-        if log_dir.exists() and not log_dir.is_dir():
-            raise Exception(f'Path exists but is not a directory: {log_dir}')
-        log_dir.mkdir(parents=True, exist_ok=True)
+        log_dir_path = log_path_obj.parent
+        if log_dir_path.exists() and not log_dir_path.is_dir():
+            raise Exception(f'Path exists but is not a directory: {log_dir_path}')
+        log_dir_path.mkdir(parents=True, exist_ok=True)
     except TypeError:
         logging.error(f'Variable "log_path" must be a Path object or string, not "NoneType"!')
         return None
@@ -88,7 +93,7 @@ def setup_logger(log_path: str | None = None) -> str | None:
                         'class': 'logging.handlers.RotatingFileHandler',
                         'formatter': 'standard',
                         'level': log_level_file,
-                        'filename': log_path,
+                        'filename': str(log_path_obj),
                         'maxBytes': 10 * 1024 * 1024,
                         'backupCount': 5,
                     },
@@ -102,10 +107,6 @@ def setup_logger(log_path: str | None = None) -> str | None:
     except Exception as e:
         logging.error(f'Error configuring logging: {e}')
         return None
-
-    # log_ignore_list: List[str] = [
-    #     # 'smbprotocol'
-    # ]
 
     for logger_name in log_ignore_list:
         logging.getLogger(logger_name).setLevel(logging.WARNING)
